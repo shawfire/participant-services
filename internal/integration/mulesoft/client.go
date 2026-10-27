@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shawfire/participant-services/internal/observability"
 	"github.com/shawfire/participant-services/internal/participant"
 )
 
@@ -89,6 +90,9 @@ func (c *Client) getOnce(
 	if err != nil {
 		return participant.Participant{}, false,
 			fmt.Errorf("create participant request: %w", err)
+	}
+	if requestID := observability.RequestID(ctx); requestID != "" {
+		req.Header.Set(observability.RequestIDHeader, requestID)
 	}
 
 	resp, err := c.httpClient.Do(req)

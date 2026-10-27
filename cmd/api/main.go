@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/shawfire/participant-services/internal/health"
 	"github.com/shawfire/participant-services/internal/integration/mulesoft"
+	"github.com/shawfire/participant-services/internal/observability"
 	"github.com/shawfire/participant-services/internal/participant"
 )
 
@@ -43,6 +45,9 @@ func main() {
 }
 
 func run() error {
+	logger := observability.NewLogger()
+	slog.SetDefault(logger)
+
 	readiness := health.NewReadiness()
 	mux := http.NewServeMux()
 
@@ -111,8 +116,10 @@ func run() error {
 	)
 
 	server := &http.Server{
-		Addr:              serverAddress,
-		Handler:           mux,
+		Addr: serverAddress,
+		Handler: observability.RequestIDMiddleware(
+			observability.AccessLogMiddleware(logger, mux),
+		),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
@@ -122,8 +129,11 @@ func run() error {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		log.Println("Participant Services API listening on", serverAddress)
-		log.Println("MuleSoft upstream:", mulesoftURL)
+		logger.Info(
+			"Participant Services API starting",
+			"address", serverAddress,
+			"mulesoft_url", mulesoftURL,
+		)
 
 		if err := server.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
@@ -140,7 +150,7 @@ func run() error {
 
 	select {
 	case <-signalCtx.Done():
-		log.Println("Shutdown signal received")
+		logger.Info("Shutdown signal received")
 		readiness.SetReady(false)
 
 	case err := <-serverErrors:
@@ -153,12 +163,15 @@ func run() error {
 	)
 	defer cancel()
 
-	log.Println("Starting graceful shutdown")
+	logger.Info(
+		"Starting graceful shutdown",
+		"timeout", shutdownTimeout.String(),
+	)
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		return err
 	}
 
-	log.Println("Graceful shutdown completed")
+	logger.Info("Graceful shutdown completed")
 	return nil
 }
