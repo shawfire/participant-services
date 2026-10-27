@@ -17,8 +17,10 @@ type Participant struct {
 type Service struct {
 	mu           sync.RWMutex
 	participants map[string]Participant
+	repository   Repository
 }
 
+// NewService creates the original in-memory implementation.
 func NewService() *Service {
 	return &Service{
 		participants: map[string]Participant{
@@ -36,12 +38,26 @@ func NewService() *Service {
 	}
 }
 
+// NewServiceWithRepository injects an external data source.
+func NewServiceWithRepository(repository Repository) *Service {
+	if repository == nil {
+		panic("participant repository must not be nil")
+	}
+	return &Service{
+		repository: repository,
+	}
+}
+
 func (s *Service) Get(
 	ctx context.Context,
 	id string,
 ) (Participant, error) {
 	if err := ctx.Err(); err != nil {
 		return Participant{}, err
+	}
+
+	if s.repository != nil {
+		return s.repository.GetParticipant(ctx, id)
 	}
 
 	s.mu.RLock()

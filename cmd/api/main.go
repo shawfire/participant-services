@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -11,56 +12,72 @@ import (
 
 	"github.com/shawfire/participant-services/graph/mobile"
 	mobilegenerated "github.com/shawfire/participant-services/graph/mobile/generated"
+
 	"github.com/shawfire/participant-services/graph/portal"
 	portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
+
+	"github.com/shawfire/participant-services/internal/integration/mulesoft"
 	"github.com/shawfire/participant-services/internal/participant"
 )
 
 func main() {
 	mux := http.NewServeMux()
 
-	// Health endpoint
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /healthz", func(
+		w http.ResponseWriter,
+		r *http.Request,
+	) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
 	})
 
-	// One shared Participant Service instance.
-	participantService := participant.NewService()
+	mulesoftURL := os.Getenv("MULESOFT_URL")
+	if mulesoftURL == "" {
+		mulesoftURL = "http://localhost:8081"
+	}
 
-	// Portal GraphQL API
+	mulesoftClient := mulesoft.NewClient(
+		mulesoftURL,
+		2*time.Second,
+	)
+
+	participantService := participant.NewServiceWithRepository(
+		mulesoftClient,
+	)
+
 	portalAPI := handler.New(
-		portalgenerated.NewExecutableSchema(portalgenerated.Config{
-			Resolvers: &portal.Resolver{
-				Participants: participantService,
+		portalgenerated.NewExecutableSchema(
+			portalgenerated.Config{
+				Resolvers: &portal.Resolver{
+					Participants: participantService,
+				},
 			},
-		}),
+		),
 	)
 
 	portalAPI.AddTransport(transport.Options{})
 	portalAPI.AddTransport(transport.POST{})
 
 	mux.Handle("POST /graphql/portal", portalAPI)
-
 	mux.Handle(
 		"GET /playground/portal",
 		playground.Handler("Portal GraphQL", "/graphql/portal"),
 	)
 
-	// Mobile GraphQL API
 	mobileAPI := handler.New(
-		mobilegenerated.NewExecutableSchema(mobilegenerated.Config{
-			Resolvers: &mobile.Resolver{
-				Participants: participantService,
+		mobilegenerated.NewExecutableSchema(
+			mobilegenerated.Config{
+				Resolvers: &mobile.Resolver{
+					Participants: participantService,
+				},
 			},
-		}),
+		),
 	)
 
 	mobileAPI.AddTransport(transport.Options{})
 	mobileAPI.AddTransport(transport.POST{})
 
 	mux.Handle("POST /graphql/mobile", mobileAPI)
-
 	mux.Handle(
 		"GET /playground/mobile",
 		playground.Handler("Mobile GraphQL", "/graphql/mobile"),
@@ -73,8 +90,10 @@ func main() {
 	}
 
 	log.Println("Participant Services API listening on :8080")
+	log.Println("MuleSoft upstream:", mulesoftURL)
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := server.ListenAndServe(); err != nil &&
+		err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }

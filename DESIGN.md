@@ -188,3 +188,89 @@ curl -sS http://localhost:8080/graphql/mobile \
 ```
 
 Do not use live participant data. Keep Playground and unauthenticated endpoints local only. Both generated packages are named `generated`; use explicit Go import aliases. Do not edit gqlgen-generated source manually; change schema/config/resolvers and regenerate.
+
+## 13. Implemented enterprise middleware integration
+
+**Status:** Implemented and verified locally on 27 October 2026.
+
+### 13.1 Architecture
+
+The Portal and Mobile GraphQL APIs share a Participant Service that retrieves data through a repository interface and MuleSoft HTTP client.
+
+```mermaid
+flowchart TD
+    Portal[Participant Portal] --> PortalGQL[Portal GraphQL]
+    Mobile[Mobile Application] --> MobileGQL[Mobile GraphQL]
+    PortalGQL --> Service[Participant Service]
+    MobileGQL --> Service
+    Service --> Repository[Repository Interface]
+    Repository --> Client[MuleSoft HTTP Client]
+    Client --> Mock[Mock MuleSoft API]
+    Mock --> Data[Synthetic Participant Data]
+```
+
+### 13.2 Component responsibilities
+
+| Component | Responsibility |
+|---|---|
+| Portal GraphQL | Portal-specific participant schema |
+| Mobile GraphQL | Mobile-specific profile schema |
+| Participant Service | Shared application service |
+| Repository interface | Dependency inversion and data access contract |
+| MuleSoft HTTP client | External HTTP integration |
+| Mock MuleSoft API | Simulated enterprise backend |
+| Synthetic data | Test participant records |
+
+### 13.3 Dependency injection
+
+The Participant Service supports an injected repository through `NewServiceWithRepository(repository)`.
+
+The MuleSoft HTTP client implements `participant.Repository`.
+
+The original `NewService()` constructor remains available for in-memory tests.
+
+### 13.4 HTTP resilience
+
+Implemented:
+
+- Configurable HTTP client timeout.
+- Request context propagation and cancellation.
+- HTTP 404 mapped to the domain not-found error.
+- HTTP 5xx mapped to an upstream error.
+- Network failure propagation.
+- JSON response decoding.
+
+Planned:
+
+- Bounded retries with exponential backoff.
+- Circuit breaking.
+- Authentication and authorisation.
+- Structured logging, metrics and distributed tracing.
+- Production-grade readiness checks.
+
+### 13.5 Runtime configuration
+
+- GraphQL API: `localhost:8080`
+- Mock MuleSoft API: `localhost:8081`
+- Upstream configuration: `MULESOFT_URL`
+
+### 13.6 Verification
+
+The following tests passed:
+
+- Participant Service unit tests.
+- Repository dependency injection tests.
+- Mock MuleSoft HTTP handler tests.
+- MuleSoft HTTP client tests.
+- Portal and Mobile GraphQL integration tests.
+- Automated GraphQL-to-MuleSoft end-to-end tests.
+
+The full `go test -race ./...` suite passed on 27 October 2026.
+
+### 13.7 Architectural trade-offs
+
+The Participant Service currently supports both in-memory data and an injected repository. This preserves compatibility but mixes two data-access strategies.
+
+A future refactor should move the in-memory implementation into a dedicated repository adapter.
+
+The MuleSoft API is simulated. No actual NDIA, MuleSoft or Salesforce systems are connected.

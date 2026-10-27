@@ -824,3 +824,76 @@ Use **synthetic participant data only**. Never commit credentials, real particip
 ## Interview focus
 
 The NDIA supplier briefing emphasises hands-on **Go, GraphQL, AWS/EKS, middleware architecture, production debugging and technical leadership**. This lab is designed to make those concepts tangible, while real interview examples should come from genuine professional experience rather than attributing simulated lab results to production projects.
+
+
+## Enterprise middleware integration — 27 October 2026
+
+The following milestones were implemented and verified locally using synthetic participant data.
+
+<details>
+<summary><strong>16. Repository dependency injection (verified)</strong></summary>
+
+Created `internal/participant/repository.go` defining the `Repository` interface with `GetParticipant(ctx, id)`.
+
+Updated `internal/participant/service.go` to support:
+
+- `NewService()` for in-memory data.
+- `NewServiceWithRepository(repository)` for injected data access.
+
+Added `internal/participant/repository_test.go` covering delegation, error propagation and context cancellation.
+
+**Verification:** All seven Participant Service tests passed, including the race-detector suite.
+
+</details>
+
+<details>
+<summary><strong>17. Mock MuleSoft HTTP API (verified)</strong></summary>
+
+Created `internal/mockmulesoft/handler.go`, `handler_test.go` and `cmd/mockmulesoft/main.go`.
+
+The mock API listens on port 8081 and exposes `GET /api/participants/{id}`.
+
+It returns synthetic participants P001 (Alex Taylor) and P002 (Jordan Lee). Unknown IDs return HTTP 404.
+
+**Verification:** Both HTTP handler tests passed.
+
+</details>
+
+<details>
+<summary><strong>18. MuleSoft HTTP client (verified)</strong></summary>
+
+Created `internal/integration/mulesoft/client.go` and `client_test.go`.
+
+The client implements `participant.Repository` and supports configurable HTTP timeouts, context propagation, 404 mapping, upstream 5xx errors, JSON decoding and network error handling.
+
+**Verification:** Six HTTP client tests passed, covering success, not found, upstream errors, timeout, cancellation and network failure.
+
+</details>
+
+<details>
+<summary><strong>19. Connect GraphQL APIs to MuleSoft (verified)</strong></summary>
+
+Updated `cmd/api/main.go` to construct a MuleSoft HTTP client and inject it into the shared Participant Service.
+
+The upstream URL is configured using `MULESOFT_URL`, defaulting to `http://localhost:8081`.
+
+Both Portal and Mobile GraphQL schemas use the same service.
+
+**Verification:** Direct MuleSoft, Portal GraphQL and Mobile GraphQL HTTP requests returned the expected synthetic data.
+
+</details>
+
+<details>
+<summary><strong>20. Automated end-to-end integration tests (verified)</strong></summary>
+
+Created `internal/integration/mulesoft/endtoend_test.go`.
+
+The test uses `httptest.Server` to exercise both GraphQL APIs through the Participant Service, MuleSoft HTTP client and mock upstream.
+
+**Verification:** Both GraphQL end-to-end subtests passed. The full `go test -race ./...` suite passed.
+
+</details>
+
+### Remaining implementation work
+
+Bounded retries, circuit breaking, authentication, authorisation, observability, PostgreSQL persistence, Docker packaging and AWS EKS deployment remain planned.
