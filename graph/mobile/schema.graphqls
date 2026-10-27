@@ -1,0 +1,8 @@
+type ParticipantProfile {
+  participantId: ID!
+  displayName: String!
+}
+
+type Query {
+  profile(participantId: ID!): ParticipantProfile
+}
