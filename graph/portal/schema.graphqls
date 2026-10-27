@@ -1,0 +1,9 @@
+type Participant {
+  id: ID!
+  firstName: String!
+  lastName: String!
+}
+
+type Query {
+  participant(id: ID!): Participant
+}
