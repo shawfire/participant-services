@@ -2,44 +2,41 @@
 
 A hands-on, **synthetic** participant-services platform built to practise the engineering skills relevant to the NDIA EL2 Lead Developer interview (RFQ LH-07533). This is an independent learning project, **not an NDIA system** and not a claim of NDIA production experience.
 
-> **Status (27 October 2026):** The Go HTTP health endpoint and the gqlgen starter Todo mutation/query have been run successfully. The repository was created as private and the initial HTTP server commit was pushed. The GraphQL mutation/query and the new `TestCreateTodo` unit test passed, including `go test -race ./...`. The GraphQL and test commits/pushes have not yet been confirmed; the participant service was supplied as a next step but has not been verified.
+> **Status (27 October 2026):** The Go health endpoint, starter Todo GraphQL example, shared Participant Service, and **separate Portal and Mobile GraphQL APIs** have been implemented and verified. Both HTTP GraphQL endpoints returned the expected synthetic participant data. Participant Service unit tests (including 100 concurrent reads), the Portal HTTP integration test, and the full `go test -race ./...` suite passed before the Mobile HTTP route was added. The Mobile resolver compiled and both endpoints responded successfully; the **Mobile HTTP integration test and final race suite after wiring both routes remain unconfirmed**. GitHub push of the Mobile changes is also unconfirmed.
 
 ## Project roadmap
 
-- [x] Verify local development tools and GitHub authentication
-- [x] Initialise Go module and private GitHub repository
-- [x] Implement and verify `/healthz`
-- [x] Install gqlgen and generate a starter GraphQL API
-- [x] Replace generated resolver panics with working in-memory implementations
-- [x] Verify a Todo mutation and query
-- [x] Run `TestCreateTodo` and `go test -race ./...` successfully
-- [ ] Verify participant service implementation and tests
-- [ ] Commit and push the GraphQL starter implementation
-- [ ] Replace Todo with participant and plan domain services
-- [ ] Separate **Portal** and **Mobile** GraphQL schemas and endpoints
-- [ ] Add request-scoped authorisation, context cancellation, timeouts and concurrency-safe storage
-- [ ] Add mock MuleSoft/Salesforce integration, retries and idempotency
-- [ ] Add PostgreSQL, automated tests, logging and tracing
-- [ ] Containerise, deploy locally on Kubernetes, then evaluate AWS EKS deployment
-- [ ] Add GitHub Actions CI/CD and production troubleshooting exercises
+- [x] Initialise private GitHub repository and Go module
+- [x] Implement `/healthz` and starter gqlgen Todo operations
+- [x] Test Todo resolver with `go test` and `-race`
+- [x] Implement `internal/participant` with `context.Context`, `sync.RWMutex`, and `ErrNotFound`
+- [x] Test participant lookup, missing ID, cancelled context and 100 concurrent reads
+- [x] Generate separate Portal and Mobile gqlgen packages and schemas
+- [x] Implement Portal and Mobile resolvers using the shared Participant Service
+- [x] Serve `/graphql/portal` and `/graphql/mobile` from one Go HTTP server
+- [x] Verify both endpoints with `curl` using participant P001
+- [x] Pass Portal GraphQL HTTP integration test
+- [ ] Confirm Mobile HTTP integration test and final full race-enabled suite
+- [ ] Commit and push Mobile milestone; verify clean Git status
+- [ ] Implement authenticated identity and participant-level authorisation
+- [ ] Add mock MuleSoft/Salesforce, timeouts, retry/idempotency and N+1 exercises
+- [ ] Add PostgreSQL, observability, Docker, Kubernetes, AWS EKS and CI/CD
 
-## Architecture target (planned)
+## Current architecture (verified locally)
 
 ```text
-Participant Portal  ──> /graphql/portal ──┐
-                                         ├──> Shared Go domain/services
-Participant Mobile  ──> /graphql/mobile ──┘           │
-                                                     ├──> PostgreSQL
-                                                     └──> Mock MuleSoft -> Mock Salesforce
+Portal client -> POST /graphql/portal -> Portal gqlgen resolver --+
+                                                              +--> shared participant.Service -> in-memory synthetic data
+Mobile client -> POST /graphql/mobile -> Mobile gqlgen resolver --+
 
-Deployment target: AWS EKS (planned)
+GET /healthz; GET /playground/portal; GET /playground/mobile
 ```
 
-The Portal and Mobile GraphQL APIs will have **separate consumer schemas** but reuse common business logic, authorisation and integration services. The current gqlgen Todo scaffold is temporary.
+**Planned, not implemented:** authentication/authorisation, PostgreSQL, MuleSoft/Salesforce adapters, production hardening, Docker/Kubernetes and EKS. Both consumers currently accept arbitrary participant IDs: **do not deploy this API publicly**.
 
 ## Design documentation
 
-See **[DESIGN.md](DESIGN.md)** for the proposed architecture, API boundaries, data flows, security model, reliability patterns, operational considerations and architectural decisions. Planned design is distinguished from implemented functionality.
+See **[DESIGN.md](DESIGN.md)** for the as-built architecture, request contracts, data flow, verified test coverage, design decisions, security gaps and future architecture.
 
 ## Reproducible development journal
 
@@ -484,18 +481,13 @@ git push
 </details>
 
 <details>
-<summary><strong>8. Next implementation stages (planned, not yet executed)</strong></summary>
+<summary><strong>8. Remaining implementation stages (planned)</strong></summary>
 
-1. **Domain and shared service layer:** participant, plan and submission models; dependency-injected Go services; tests.
-2. **Two GraphQL schemas:** separate gqlgen configurations and generated packages for `/graphql/portal` and `/graphql/mobile`, with shared domain logic and distinct consumer contracts.
-3. **Identity and authorisation:** derive mobile `me` from verified identity; enforce resource-level access, not only authentication.
-4. **Performance:** reproduce and fix N+1 resolver calls, add batching/pagination, complexity and depth limits.
-5. **Resilience:** context cancellation, deadlines, bounded concurrency, retries/backoff, circuit-breaking considerations and idempotent submissions.
-6. **Enterprise integration:** simulated MuleSoft/Salesforce HTTP APIs, including latency, 5xx responses and duplicate submissions.
-7. **Operations:** PostgreSQL, structured logs, traces, metrics, Docker, Kubernetes probes, GitHub Actions and eventual AWS EKS deployment.
-8. **Interview drills:** slow GraphQL requests, Go memory growth/OOMKilled, failed integration calls and review of insecure AI-generated code.
-
-No commands in this section have been executed yet; document exact commands and verified results as each milestone is completed.
+1. Mobile HTTP integration test and final race suite; commit/push changes.
+2. Identity-based access control for participant records (Portal and Mobile), GraphQL query limits and secure errors.
+3. Mock MuleSoft/Salesforce HTTP integration with context propagation, timeouts, safe retries and idempotency.
+4. N+1 demonstration, DataLoader batching, metrics and traces.
+5. PostgreSQL, Docker, local Kubernetes, AWS EKS and GitHub Actions.
 
 </details>
 
@@ -549,7 +541,7 @@ Commit/push shown for reference; execution not confirmed.
 </details>
 
 <details>
-<summary><strong>10. Introduce shared participant service (provided; not yet verified)</strong></summary>
+<summary><strong>10. Introduce shared participant service (verified)</strong></summary>
 
 ```bash
 mkdir -p internal/participant
@@ -596,7 +588,196 @@ gofmt -w internal/participant/service.go
 go test ./...
 ```
 
-**Status:** This implementation was proposed but no execution or test result has been supplied. `RWMutex` guards access to the in-memory map; it does not itself enforce participant-level authorisation. Before production use, add tests, explicit access controls and a persistent store.
+**Verified:** `gofmt`, `go test ./...` and `go test -race ./...` passed. Tests `TestGetParticipant`, `TestGetParticipantNotFound`, `TestGetParticipantCancelled`, and `TestConcurrentParticipantReads` (100 goroutines) all passed. `RWMutex` guards map access; it does not implement participant-level authorisation. The current implementation reads a fixed in-memory map; concurrent writes are not exercised.
+
+</details>
+
+<details>
+<summary><strong>11. Generate the separate Portal GraphQL API (verified)</strong></summary>
+
+Create `graph/portal/schema.graphqls`:
+
+```graphql
+type Participant {
+  id: ID!
+  firstName: String!
+  lastName: String!
+}
+
+type Query {
+  participant(id: ID!): Participant
+}
+```
+
+Create `gqlgen.portal.yml`:
+
+```yaml
+schema:
+  - graph/portal/schema.graphqls
+exec:
+  filename: graph/portal/generated/generated.go
+  package: generated
+model:
+  filename: graph/portal/model/models_gen.go
+  package: model
+resolver:
+  layout: follow-schema
+  dir: graph/portal
+  package: portal
+  filename_template: "{name}.resolvers.go"
+```
+
+```bash
+go tool gqlgen generate --config gqlgen.portal.yml
+go test ./...
+```
+
+The Portal resolver injects `*participant.Service` and calls `Participants.Get(ctx, id)`. It converts `ErrNotFound` to a nullable GraphQL result and returns a `model.Participant`. The handwritten resolver implements `generated.QueryResolver` from `graph/portal/generated`, not a local `QueryResolver` interface.
+
+**Verified:** generation and compilation; `TestPortalParticipantQuery` using `httptest`; successful HTTP query for `P001`.
+
+</details>
+
+<details>
+<summary><strong>12. Generate the separate Mobile GraphQL API (verified)</strong></summary>
+
+Create `graph/mobile/schema.graphqls`:
+
+```graphql
+type ParticipantProfile {
+  participantId: ID!
+  displayName: String!
+}
+
+type Query {
+  profile(participantId: ID!): ParticipantProfile
+}
+```
+
+Create `gqlgen.mobile.yml`:
+
+```yaml
+schema:
+  - graph/mobile/schema.graphqls
+exec:
+  filename: graph/mobile/generated/generated.go
+  package: generated
+model:
+  filename: graph/mobile/model/models_gen.go
+  package: model
+resolver:
+  layout: follow-schema
+  dir: graph/mobile
+  package: mobile
+  filename_template: "{name}.resolvers.go"
+```
+
+```bash
+go tool gqlgen generate --config gqlgen.mobile.yml
+go test ./...
+go test -race ./...
+```
+
+The Mobile resolver calls the **same service type** and maps `FirstName + " " + LastName` to `displayName`. It uses its own generated `model.ParticipantProfile` and `generated.QueryResolver` interface. Compilation and race-enabled tests passed before the final HTTP wiring.
+
+</details>
+
+<details>
+<summary><strong>13. Serve Portal and Mobile from one HTTP server (verified)</strong></summary>
+
+In `cmd/api/main.go`, use distinct aliases for the two packages named `generated`:
+
+```go
+import (
+    "github.com/shawfire/participant-services/graph/mobile"
+    mobilegenerated "github.com/shawfire/participant-services/graph/mobile/generated"
+    "github.com/shawfire/participant-services/graph/portal"
+    portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
+    "github.com/shawfire/participant-services/internal/participant"
+)
+```
+
+The handler wiring (within `main`, with `mux`, `handler`, `transport`, and `playground` imports) is:
+
+```go
+participantService := participant.NewService()
+portalAPI := handler.New(portalgenerated.NewExecutableSchema(portalgenerated.Config{
+    Resolvers: &portal.Resolver{Participants: participantService},
+}))
+portalAPI.AddTransport(transport.Options{})
+portalAPI.AddTransport(transport.POST{})
+mux.Handle("POST /graphql/portal", portalAPI)
+mux.Handle("GET /playground/portal", playground.Handler("Portal GraphQL", "/graphql/portal"))
+
+mobileAPI := handler.New(mobilegenerated.NewExecutableSchema(mobilegenerated.Config{
+    Resolvers: &mobile.Resolver{Participants: participantService},
+}))
+mobileAPI.AddTransport(transport.Options{})
+mobileAPI.AddTransport(transport.POST{})
+mux.Handle("POST /graphql/mobile", mobileAPI)
+mux.Handle("GET /playground/mobile", playground.Handler("Mobile GraphQL", "/graphql/mobile"))
+```
+
+Both resolvers receive the **same `participantService` instance**. A previous build failed because both generated packages were imported under the same name; distinct aliases fixed that. Another build failed due to a malformed import block; replacing `cmd/api/main.go` with a complete file resolved the issue.
+
+```bash
+gofmt -w cmd/api/main.go
+go test ./...
+go run ./cmd/api
+```
+
+**Verified:** both routes responded correctly via `curl` after the file replacement. The final `go test` output after that replacement was not supplied.
+
+</details>
+
+<details>
+<summary><strong>14. Query both endpoints and validate results (verified)</strong></summary>
+
+```bash
+curl -sS http://localhost:8080/graphql/portal \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ participant(id: \"P001\") { id firstName lastName } }"}'
+```
+
+Expected and observed (compact formatting):
+
+```json
+{"data":{"participant":{"id":"P001","firstName":"Alex","lastName":"Taylor"}}}
+```
+
+```bash
+curl -sS http://localhost:8080/graphql/mobile \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ profile(participantId: \"P001\") { participantId displayName } }"}'
+```
+
+Expected and observed:
+
+```json
+{"data":{"profile":{"participantId":"P001","displayName":"Alex Taylor"}}}
+```
+
+GraphQL Playground URLs: `http://localhost:8080/playground/portal` and `http://localhost:8080/playground/mobile`. Query text belongs in the main query editor; the Variables and Headers panels expect JSON.
+
+</details>
+
+<details>
+<summary><strong>15. Mobile integration test and Git milestone (pending verification)</strong></summary>
+
+The proposed `graph/mobile/integration_test.go` uses `httptest.NewRequest`, gqlgen `handler.New`, and `json.Unmarshal` to check that `profile(participantId: "P001")` returns `participantId: "P001"` and `displayName: "Alex Taylor"` without GraphQL errors. The user has not yet supplied execution output for this test.
+
+```bash
+gofmt -w graph/mobile/integration_test.go
+go test -v ./graph/mobile
+go test -race ./...
+# Only after passing:
+git add cmd/api/main.go gqlgen.mobile.yml graph/mobile/
+git commit -m "Add Mobile GraphQL API with shared participant service"
+git push
+git status
+```
+
+The most recent Git status showed `cmd/api/main.go` modified, and `gqlgen.mobile.yml` plus `graph/mobile/` untracked. Do not mark the Mobile commit/push complete until confirmed.
 
 </details>
 
@@ -604,23 +785,36 @@ go test ./...
 
 ```text
 participant-services/
-├── cmd/
-│   └── api/
-│       └── main.go           # Original /healthz server
+├── cmd/api/main.go                 # Health, Portal and Mobile HTTP routes
 ├── graph/
-│   ├── model/                # gqlgen model types
-│   ├── generated/            # gqlgen executable schema (layout may vary)
-│   ├── resolver.go           # In-memory Todo state
-│   ├── schema.graphqls       # Temporary Todo schema
-│   ├── schema.resolvers.go   # Todo mutation/query implementation
-│   └── schema.resolvers_test.go # Verified unit test
-├── internal/participant/      # Planned/proposed shared service (unverified)
-├── DESIGN.md                  # Architecture and design decisions
-├── gqlgen.yml
-├── server.go                 # Generated GraphQL demo server
+│   ├── schema.graphqls             # Legacy Todo scaffold
+│   ├── schema.resolvers.go         # Legacy Todo resolvers
+│   ├── schema.resolvers_test.go    # Verified Todo test
+│   ├── portal/
+│   │   ├── schema.graphqls         # Portal-specific contract
+│   │   ├── resolver.go
+│   │   ├── schema.resolvers.go
+│   │   ├── integration_test.go     # Verified Portal HTTP test
+│   │   ├── generated/
+│   │   └── model/
+│   └── mobile/
+│       ├── schema.graphqls         # Mobile-specific contract
+│       ├── resolver.go
+│       ├── schema.resolvers.go
+│       ├── generated/
+│       ├── model/
+│       └── integration_test.go     # Proposed; execution unconfirmed
+├── internal/participant/
+│   ├── service.go
+│   └── service_test.go             # Four passing service tests
+├── gqlgen.yml                     # Legacy Todo config
+├── gqlgen.portal.yml
+├── gqlgen.mobile.yml
+├── server.go                      # Legacy Todo demo server
+├── DESIGN.md
+├── README.md
 ├── go.mod
-├── go.sum
-└── README.md
+└── go.sum
 ```
 
 ## Security and development guidance
