@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+.AppleDouble
+
+# Go
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+bin/
+dist/
