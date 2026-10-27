@@ -897,3 +897,16 @@ The test uses `httptest.Server` to exercise both GraphQL APIs through the Partic
 ### Remaining implementation work
 
 Bounded retries, circuit breaking, authentication, authorisation, observability, PostgreSQL persistence, Docker packaging and AWS EKS deployment remain planned.
+
+<details>
+<summary><strong>21. MuleSoft HTTP resilience — bounded retries (verified 27 October 2026)</strong></summary>
+
+Implemented three total HTTP attempts with exponential backoff (100 ms, then 200 ms). HTTP 502, 503 and 504 are retryable; HTTP 404 and client timeouts are not. Context cancellation stops retry waiting.
+
+Added retry tests covering transient recovery, maximum attempts, HTTP 404 and cancellation during backoff.
+
+Verification: go test -count=1 -race ./... passed. git diff --check passed.
+
+Future improvements: jitter, Retry-After, overall retry budget and metrics.
+
+</details>

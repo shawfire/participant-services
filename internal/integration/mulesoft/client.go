@@ -15,6 +15,11 @@ import (
 
 var ErrUpstream = errors.New("mulesoft upstream error")
 
+const (
+	maxAttempts       = 3
+	initialRetryDelay = 100 * time.Millisecond
+)
+
 type Client struct {
 	baseURL    string
 	httpClient *http.Client
@@ -37,6 +42,44 @@ func (c *Client) GetParticipant(
 ) (participant.Participant, error) {
 	endpoint := c.baseURL + "/api/participants/" + url.PathEscape(id)
 
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return participant.Participant{}, err
+		}
+
+		p, retry, err := c.getOnce(ctx, endpoint)
+		if err == nil {
+			return p, nil
+		}
+
+		lastErr = err
+
+		if !retry || attempt == maxAttempts {
+			return participant.Participant{}, err
+		}
+
+		delay := initialRetryDelay * time.Duration(1<<(attempt-1))
+		timer := time.NewTimer(delay)
+
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return participant.Participant{}, ctx.Err()
+
+		case <-timer.C:
+			// Continue to the next attempt.
+		}
+	}
+
+	return participant.Participant{}, lastErr
+}
+
+func (c *Client) getOnce(
+	ctx context.Context,
+	endpoint string,
+) (participant.Participant, bool, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
@@ -44,41 +87,58 @@ func (c *Client) GetParticipant(
 		nil,
 	)
 	if err != nil {
-		return participant.Participant{}, fmt.Errorf(
-			"create participant request: %w", err,
-		)
+		return participant.Participant{}, false,
+			fmt.Errorf("create participant request: %w", err)
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return participant.Participant{}, fmt.Errorf(
-			"mulesoft request failed: %w", err,
-		)
+		if ctx.Err() != nil {
+			return participant.Participant{}, false, ctx.Err()
+		}
+
+		var timeoutErr interface{ Timeout() bool }
+		if errors.As(err, &timeoutErr) && timeoutErr.Timeout() {
+			return participant.Participant{}, false,
+				fmt.Errorf("mulesoft request timeout: %w", err)
+		}
+
+		return participant.Participant{}, true,
+			fmt.Errorf("mulesoft request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	switch {
-	case resp.StatusCode == http.StatusNotFound:
-		return participant.Participant{}, participant.ErrNotFound
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return participant.Participant{}, false,
+			participant.ErrNotFound
 
-	case resp.StatusCode >= 500:
-		return participant.Participant{}, fmt.Errorf(
-			"%w: HTTP %d", ErrUpstream, resp.StatusCode,
-		)
+	case http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return participant.Participant{}, true,
+			fmt.Errorf("%w: HTTP %d", ErrUpstream, resp.StatusCode)
+	}
 
-	case resp.StatusCode != http.StatusOK:
-		return participant.Participant{}, fmt.Errorf(
-			"unexpected mulesoft status: HTTP %d", resp.StatusCode,
-		)
+	if resp.StatusCode >= 500 {
+		return participant.Participant{}, false,
+			fmt.Errorf("%w: HTTP %d", ErrUpstream, resp.StatusCode)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return participant.Participant{}, false,
+			fmt.Errorf(
+				"unexpected mulesoft status: HTTP %d",
+				resp.StatusCode,
+			)
 	}
 
 	var p participant.Participant
 
 	if err := json.NewDecoder(resp.Body).Decode(&p); err != nil {
-		return participant.Participant{}, fmt.Errorf(
-			"decode participant response: %w", err,
-		)
+		return participant.Participant{}, false,
+			fmt.Errorf("decode participant response: %w", err)
 	}
 
-	return p, nil
+	return p, false, nil
 }

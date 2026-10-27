@@ -274,3 +274,20 @@ The Participant Service currently supports both in-memory data and an injected r
 A future refactor should move the in-memory implementation into a dedicated repository adapter.
 
 The MuleSoft API is simulated. No actual NDIA, MuleSoft or Salesforce systems are connected.
+
+### 13.8 Bounded retries and exponential backoff
+
+**Status:** Implemented and verified locally on 27 October 2026.
+
+The MuleSoft HTTP client supports three total GET attempts, with retry delays derived from the named constant `initialRetryDelay` (100 ms followed by 200 ms).
+
+- Retry HTTP 502, 503 and 504, plus eligible network failures.
+- Do not retry HTTP 404, other non-retryable responses or client timeout errors.
+- Stop when the request context is cancelled, including during backoff.
+- Preserve the shared Participant Service and existing GraphQL schemas.
+
+Automated tests verify recovery after transient failures, the maximum attempt count, no retry for HTTP 404, and cancellation during backoff.
+
+**Verification:** `go test -count=1 -race ./...` passed.
+
+**Production improvements planned:** jitter, `Retry-After` handling, an overall retry budget, configurable policies and retry metrics.
