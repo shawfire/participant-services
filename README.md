@@ -2,7 +2,7 @@
 
 A hands-on, **synthetic** participant-services platform built to practise the engineering skills relevant to the NDIA EL2 Lead Developer interview (RFQ LH-07533). This is an independent learning project, **not an NDIA system** and not a claim of NDIA production experience.
 
-> **Status (27 October 2026):** The Go HTTP health endpoint and the gqlgen starter Todo mutation/query have been run successfully. The repository was created as private and the initial HTTP server commit was pushed. The GraphQL changes have been tested interactively but their subsequent commit/push has not yet been confirmed.
+> **Status (27 October 2026):** The Go HTTP health endpoint and the gqlgen starter Todo mutation/query have been run successfully. The repository was created as private and the initial HTTP server commit was pushed. The GraphQL mutation/query and the new `TestCreateTodo` unit test passed, including `go test -race ./...`. The GraphQL and test commits/pushes have not yet been confirmed; the participant service was supplied as a next step but has not been verified.
 
 ## Project roadmap
 
@@ -12,6 +12,8 @@ A hands-on, **synthetic** participant-services platform built to practise the en
 - [x] Install gqlgen and generate a starter GraphQL API
 - [x] Replace generated resolver panics with working in-memory implementations
 - [x] Verify a Todo mutation and query
+- [x] Run `TestCreateTodo` and `go test -race ./...` successfully
+- [ ] Verify participant service implementation and tests
 - [ ] Commit and push the GraphQL starter implementation
 - [ ] Replace Todo with participant and plan domain services
 - [ ] Separate **Portal** and **Mobile** GraphQL schemas and endpoints
@@ -34,6 +36,10 @@ Deployment target: AWS EKS (planned)
 ```
 
 The Portal and Mobile GraphQL APIs will have **separate consumer schemas** but reuse common business logic, authorisation and integration services. The current gqlgen Todo scaffold is temporary.
+
+## Design documentation
+
+See **[DESIGN.md](DESIGN.md)** for the proposed architecture, API boundaries, data flows, security model, reliability patterns, operational considerations and architectural decisions. Planned design is distinguished from implemented functionality.
 
 ## Reproducible development journal
 
@@ -465,7 +471,7 @@ git commit -m "Add gqlgen GraphQL API with working resolvers"
 git push
 ```
 
-**Status:** These commands were recommended but their execution and result have not yet been reported. `go test ./...` at this stage may only verify compilation for packages without tests; automated unit tests still need to be written.
+**Status:** Initial `go test ./...` compiled all four packages and reported `[no test files]`. A resolver unit test was subsequently added and both `go test -v ./...` and `go test -race ./...` passed. The Git commit/push for these changes has not been confirmed.
 
 Add this README to the same or a subsequent commit:
 
@@ -493,6 +499,107 @@ No commands in this section have been executed yet; document exact commands and 
 
 </details>
 
+<details>
+<summary><strong>9. Add a resolver unit test and run the race detector (verified)</strong></summary>
+
+Create `graph/schema.resolvers_test.go`:
+
+```go
+package graph
+
+import (
+    "context"
+    "testing"
+
+    "github.com/shawfire/participant-services/graph/model"
+)
+
+func TestCreateTodo(t *testing.T) {
+    r := &Resolver{}
+    todo, err := r.Mutation().CreateTodo(context.Background(), model.NewTodo{
+        Text: "Prepare NDIA interview", UserID: "shawfire",
+    })
+    if err != nil { t.Fatalf("CreateTodo failed: %v", err) }
+    if todo.ID != "1" { t.Errorf("expected ID 1, got %s", todo.ID) }
+    if todo.Text != "Prepare NDIA interview" { t.Errorf("unexpected text: %s", todo.Text) }
+    if todo.Done { t.Error("new todo should not be completed") }
+
+    todos, err := r.Query().Todos(context.Background())
+    if err != nil { t.Fatalf("Todos failed: %v", err) }
+    if len(todos) != 1 { t.Fatalf("expected 1 todo, got %d", len(todos)) }
+}
+```
+
+```bash
+gofmt -w graph/schema.resolvers_test.go
+go test -v ./...
+go test -race ./...
+```
+
+**Observed:** `TestCreateTodo` passed; race-detector run passed. This does **not** establish concurrency safety: the test only exercises sequential calls, while the current Todo slice has no synchronization.
+
+```bash
+git add graph/schema.resolvers_test.go
+git commit -m "Add GraphQL resolver unit tests"
+git push
+```
+
+Commit/push shown for reference; execution not confirmed.
+
+</details>
+
+<details>
+<summary><strong>10. Introduce shared participant service (provided; not yet verified)</strong></summary>
+
+```bash
+mkdir -p internal/participant
+cat > internal/participant/service.go <<'EOF'
+package participant
+
+import (
+    "context"
+    "errors"
+    "sync"
+)
+
+var ErrNotFound = errors.New("participant not found")
+
+type Participant struct {
+    ID        string
+    FirstName string
+    LastName  string
+}
+
+type Service struct {
+    mu           sync.RWMutex
+    participants map[string]Participant
+}
+
+func NewService() *Service {
+    return &Service{participants: map[string]Participant{
+        "P001": {ID: "P001", FirstName: "Alex", LastName: "Taylor"},
+        "P002": {ID: "P002", FirstName: "Jordan", LastName: "Lee"},
+    }}
+}
+
+func (s *Service) Get(ctx context.Context, id string) (Participant, error) {
+    if err := ctx.Err(); err != nil { return Participant{}, err }
+    s.mu.RLock()
+    defer s.mu.RUnlock()
+    p, ok := s.participants[id]
+    if !ok { return Participant{}, ErrNotFound }
+    return p, nil
+}
+EOF
+
+gofmt -w internal/participant/service.go
+go test ./...
+```
+
+**Status:** This implementation was proposed but no execution or test result has been supplied. `RWMutex` guards access to the in-memory map; it does not itself enforce participant-level authorisation. Before production use, add tests, explicit access controls and a persistent store.
+
+</details>
+
 ## Current source layout
 
 ```text
@@ -505,7 +612,10 @@ participant-services/
 │   ├── generated/            # gqlgen executable schema (layout may vary)
 │   ├── resolver.go           # In-memory Todo state
 │   ├── schema.graphqls       # Temporary Todo schema
-│   └── schema.resolvers.go   # Todo mutation/query implementation
+│   ├── schema.resolvers.go   # Todo mutation/query implementation
+│   └── schema.resolvers_test.go # Verified unit test
+├── internal/participant/      # Planned/proposed shared service (unverified)
+├── DESIGN.md                  # Architecture and design decisions
 ├── gqlgen.yml
 ├── server.go                 # Generated GraphQL demo server
 ├── go.mod
