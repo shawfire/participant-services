@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -16,13 +20,33 @@ import (
 	"github.com/shawfire/participant-services/graph/portal"
 	portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
 
+	"github.com/shawfire/participant-services/internal/health"
 	"github.com/shawfire/participant-services/internal/integration/mulesoft"
 	"github.com/shawfire/participant-services/internal/participant"
 )
 
+const (
+	serverAddress      = ":8080"
+	defaultMuleSoftURL = "http://localhost:8081"
+	muleSoftTimeout    = 2 * time.Second
+	readHeaderTimeout  = 5 * time.Second
+	readTimeout        = 10 * time.Second
+	writeTimeout       = 15 * time.Second
+	idleTimeout        = 60 * time.Second
+	shutdownTimeout    = 10 * time.Second
+)
+
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
+	readiness := health.NewReadiness()
 	mux := http.NewServeMux()
 
+	// Liveness: the application process is running.
 	mux.HandleFunc("GET /healthz", func(
 		w http.ResponseWriter,
 		r *http.Request,
@@ -31,14 +55,17 @@ func main() {
 		_, _ = w.Write([]byte("ok\n"))
 	})
 
+	// Readiness: the application can accept traffic.
+	mux.Handle("GET /readyz", readiness)
+
 	mulesoftURL := os.Getenv("MULESOFT_URL")
 	if mulesoftURL == "" {
-		mulesoftURL = "http://localhost:8081"
+		mulesoftURL = defaultMuleSoftURL
 	}
 
 	mulesoftClient := mulesoft.NewClient(
 		mulesoftURL,
-		2*time.Second,
+		muleSoftTimeout,
 	)
 
 	participantService := participant.NewServiceWithRepository(
@@ -84,16 +111,54 @@ func main() {
 	)
 
 	server := &http.Server{
-		Addr:              ":8080",
+		Addr:              serverAddress,
 		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 
-	log.Println("Participant Services API listening on :8080")
-	log.Println("MuleSoft upstream:", mulesoftURL)
+	serverErrors := make(chan error, 1)
 
-	if err := server.ListenAndServe(); err != nil &&
-		err != http.ErrServerClosed {
-		log.Fatal(err)
+	go func() {
+		log.Println("Participant Services API listening on", serverAddress)
+		log.Println("MuleSoft upstream:", mulesoftURL)
+
+		if err := server.ListenAndServe(); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+		}
+	}()
+
+	signalCtx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
+	select {
+	case <-signalCtx.Done():
+		log.Println("Shutdown signal received")
+		readiness.SetReady(false)
+
+	case err := <-serverErrors:
+		return err
 	}
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		shutdownTimeout,
+	)
+	defer cancel()
+
+	log.Println("Starting graceful shutdown")
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return err
+	}
+
+	log.Println("Graceful shutdown completed")
+	return nil
 }

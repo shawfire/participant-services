@@ -910,3 +910,37 @@ Verification: go test -count=1 -race ./... passed. git diff --check passed.
 Future improvements: jitter, Retry-After, overall retry budget and metrics.
 
 </details>
+
+<details>
+<summary>22. Production-grade Go HTTP server lifecycle</summary>
+
+### Implementation
+
+- Configured HTTP server timeouts:
+  - Read header: 5 seconds
+  - Read: 10 seconds
+  - Write: 15 seconds
+  - Idle: 60 seconds
+- Added SIGINT/SIGTERM handling using `signal.NotifyContext`.
+- Added graceful HTTP shutdown with a 10-second deadline.
+- Added `/healthz` liveness endpoint.
+- Added `/readyz` readiness endpoint backed by `atomic.Bool`.
+- Moved readiness handling into `internal/health`.
+- Marked the application not ready when shutdown begins.
+
+### Verification
+
+- Verified `/healthz` and `/readyz` return HTTP 200 during normal operation.
+- Verified the API exits cleanly after SIGTERM.
+- Added automated readiness tests for HTTP 200, HTTP 503, and concurrent access.
+- Added an HTTP integration test proving `http.Server.Shutdown` waits for an active request to complete.
+- Passed `go test -count=1 -race ./...`, `go vet ./...`, and `git diff --check`.
+
+### Production considerations
+
+- The readiness state is currently in-memory and does not verify upstream MuleSoft availability.
+- Kubernetes readiness changes and load-balancer endpoint updates are not instantaneous.
+- A production EKS deployment needs coordinated traffic draining, appropriate termination grace periods, and lifecycle configuration.
+- The shutdown integration test verifies Go HTTP server behaviour, not the complete Kubernetes termination sequence.
+
+</details>

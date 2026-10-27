@@ -2,11 +2,15 @@
 
 > **Status: implemented local baseline plus planned architecture, 27 October 2026.** Portal and Mobile GraphQL endpoints have both returned expected synthetic participant data through a shared Go service. Service unit tests and Portal HTTP integration tests passed, including race-enabled runs before final Mobile route wiring. Mobile HTTP integration testing, authorisation, external integrations and cloud deployment are pending. This is a synthetic interview lab, not an NDIA system.
 
-## 1. Purpose and scope
+<details>
+<summary>1. Purpose and scope</summary>
 
 Practise designing and troubleshooting a Go middleware platform serving a Participant Portal and Mobile App, with GraphQL consumer APIs, shared services, simulated enterprise integrations and eventual AWS EKS deployment. Key interview themes: hands-on Go, GraphQL, security, platform engineering, production debugging and technical leadership.
 
-## 2. As-built architecture and planned extensions
+</details>
+
+<details>
+<summary>2. As-built architecture and planned extensions</summary>
 
 ```mermaid
 flowchart TB
@@ -26,7 +30,10 @@ flowchart TB
 
 The server constructs **one** `participant.NewService()` and injects it into both GraphQL resolvers. Two distinct gqlgen configurations (`gqlgen.portal.yml`, `gqlgen.mobile.yml`) generate separate executable schemas and models. Import aliases `portalgenerated` and `mobilegenerated` prevent package-name collisions.
 
-## 3. Actual GraphQL contracts
+</details>
+
+<details>
+<summary>3. Actual GraphQL contracts</summary>
 
 **Portal** (`graph/portal/schema.graphqls`):
 
@@ -63,7 +70,10 @@ type Query {
 
 **Security gap:** both APIs currently accept caller-provided participant IDs without authentication or authorisation. They must remain local development endpoints with synthetic data.
 
-## 4. Representative request flows
+</details>
+
+<details>
+<summary>4. Representative request flows</summary>
 
 ### Read participant information
 
@@ -84,7 +94,10 @@ type Query {
 5. Reconcile eventual outcomes without creating duplicate submissions.
 6. Return a stable submission identifier and status to clients.
 
-## 5. Go design and resilience
+</details>
+
+<details>
+<summary>5. Go design and resilience</summary>
 
 - `context.Context` flows from HTTP handler through resolver, service and downstream HTTP/database calls; honor cancellation and deadlines.
 - Bound goroutines, outbound concurrency and connection pools. Use `errgroup` or worker pools where parallel work is justified; avoid fire-and-forget goroutines tied to requests.
@@ -93,13 +106,19 @@ type Query {
 - Use structured logs, request IDs, metrics, traces and latency/error SLOs; test graceful shutdown and resource cleanup.
 - The implemented `participant.Service` uses `sync.RWMutex` for map access, checks `ctx.Err()` before reading, and returns `ErrNotFound` for absent IDs. All four service tests passed, including 100 concurrent readers; no write path or authorisation exists yet.
 
-## 6. Persistence and integration
+</details>
+
+<details>
+<summary>6. Persistence and integration</summary>
 
 **Planned PostgreSQL entities:** `participants`, `plans`, `submissions`, and `submission_events` (exact columns and constraints to be designed). Use migrations, transaction boundaries, indexed lookup paths and parameterised queries. Avoid storing sensitive data in logs.
 
 **Simulated integration:** Go adapter → mock MuleSoft → mock Salesforce, with configurable success, latency, 429/500/503, connection failures and duplicate requests. Mocks must use synthetic records only. Keep integration DTOs separate from GraphQL and domain models.
 
-## 7. AWS/EKS deployment (planned)
+</details>
+
+<details>
+<summary>7. AWS/EKS deployment (planned)</summary>
 
 ```text
 Client -> controlled edge / ingress -> EKS Go API pods
@@ -110,7 +129,10 @@ Client -> controlled edge / ingress -> EKS Go API pods
 
 Define Docker image, Kubernetes Deployment/Service/Ingress, CPU/memory requests and limits, liveness/readiness probes, rolling updates and autoscaling. Prefer workload identity/IAM roles over static AWS keys; store secrets in a managed secret store; restrict networking and database access. ECR and EKS deployment is **not yet performed**. Cloudflare Zero Trust/Access/Tunnels may be studied as an optional security layer, not assumed to be present.
 
-## 8. Verification matrix and failure drills
+</details>
+
+<details>
+<summary>8. Verification matrix and failure drills</summary>
 
 | Layer | Verified | Remaining |
 |---|---|---|
@@ -124,7 +146,10 @@ Define Docker image, Kubernetes Deployment/Service/Ingress, CPU/memory requests 
 
 **Observed live responses:** Portal returned `{ "id":"P001", "firstName":"Alex", "lastName":"Taylor" }`; Mobile returned `{ "participantId":"P001", "displayName":"Alex Taylor" }` under the `data` object. These verify local endpoint behavior, not production readiness.
 
-## 9. Architectural decisions (proposed)
+</details>
+
+<details>
+<summary>9. Architectural decisions (proposed)</summary>
 
 <details>
 <summary><strong>ADR-001: Separate GraphQL contracts per consumer</strong></summary>
@@ -154,11 +179,17 @@ Define Docker image, Kubernetes Deployment/Service/Ingress, CPU/memory requests 
 
 </details>
 
-## 10. Team engineering practices
+</details>
+
+<details>
+<summary>10. Team engineering practices</summary>
 
 Establish PR review requirements, schema compatibility checks, threat modelling for participant data, automated tests, race checks, dependency/security scanning, documented incident playbooks and rollback criteria. AI-generated code is treated as an untrusted draft requiring human review, particularly for authorisation, error handling and resource leaks.
 
-## 11. Immediate next milestone
+</details>
+
+<details>
+<summary>11. Immediate next milestone</summary>
 
 1. Create/verify `graph/mobile/integration_test.go`; run `go test -v ./graph/mobile` and `go test -race ./...` after both routes are wired.
 2. Commit and push `cmd/api/main.go`, `gqlgen.mobile.yml`, `graph/mobile/`; confirm clean `git status`.
@@ -166,7 +197,10 @@ Establish PR review requirements, schema compatibility checks, threat modelling 
 4. Introduce a mock MuleSoft integration with cancellation, timeouts, structured errors and idempotency; write failure tests.
 5. Demonstrate GraphQL N+1 and batching; then Docker, observability, Kubernetes and EKS.
 
-## 12. Developer commands and operational notes
+</details>
+
+<details>
+<summary>12. Developer commands and operational notes</summary>
 
 ```bash
 go tool gqlgen generate --config gqlgen.portal.yml
@@ -189,7 +223,10 @@ curl -sS http://localhost:8080/graphql/mobile \
 
 Do not use live participant data. Keep Playground and unauthenticated endpoints local only. Both generated packages are named `generated`; use explicit Go import aliases. Do not edit gqlgen-generated source manually; change schema/config/resolvers and regenerate.
 
-## 13. Implemented enterprise middleware integration
+</details>
+
+<details>
+<summary>13. Implemented enterprise middleware integration</summary>
 
 **Status:** Implemented and verified locally on 27 October 2026.
 
@@ -291,3 +328,76 @@ Automated tests verify recovery after transient failures, the maximum attempt co
 **Verification:** `go test -count=1 -race ./...` passed.
 
 **Production improvements planned:** jitter, `Retry-After` handling, an overall retry budget, configurable policies and retry metrics.
+
+</details>
+
+<details>
+<summary>14. Production-grade HTTP server lifecycle</summary>
+
+### 14.1 Server configuration
+
+The Participant Services API uses Go's `net/http` server with explicit timeouts:
+
+| Setting | Value | Purpose |
+|---|---|---|
+| ReadHeaderTimeout | 5 seconds | Limits time spent receiving HTTP headers |
+| ReadTimeout | 10 seconds | Limits time spent reading the complete request |
+| WriteTimeout | 15 seconds | Bounds response writing time |
+| IdleTimeout | 60 seconds | Limits idle keep-alive connections |
+| Shutdown timeout | 10 seconds | Bounds graceful shutdown |
+
+These settings provide baseline protection against stalled connections and unbounded shutdown.
+
+### 14.2 Liveness and readiness
+
+The API exposes two separate health endpoints:
+
+- `GET /healthz` returns HTTP 200 while the HTTP server is operating.
+- `GET /readyz` returns HTTP 200 when the application is ready and HTTP 503 when readiness is disabled.
+
+Readiness is implemented in `internal/health` using `atomic.Bool`, allowing safe concurrent access from HTTP handlers and the shutdown goroutine.
+
+The current readiness check reflects application lifecycle state. It does not actively test MuleSoft or other external dependencies.
+
+### 14.3 Graceful shutdown
+
+The API listens for SIGINT and SIGTERM using `signal.NotifyContext`.
+
+On receiving a shutdown signal:
+
+1. The application marks itself not ready.
+2. It creates a shutdown context with a 10-second deadline.
+3. It calls `http.Server.Shutdown`.
+4. The HTTP server stops accepting new connections and waits for active requests to complete.
+5. The application exits when shutdown finishes or reports an error if the deadline is exceeded.
+
+The application does not currently include a pre-shutdown delay for Kubernetes endpoint propagation.
+
+### 14.4 Automated verification
+
+Tests cover:
+
+- Initial readiness returning HTTP 200.
+- Disabled readiness returning HTTP 503.
+- Concurrent readiness reads and writes under Go's race detector.
+- An active HTTP request completing while `http.Server.Shutdown` is running.
+
+The complete repository has passed:
+
+- `go test -count=1 -race ./...`
+- `go vet ./...`
+- `git diff --check`
+
+### 14.5 AWS EKS considerations
+
+A future Kubernetes deployment should define:
+
+- A readiness probe using `/readyz`.
+- A liveness probe using `/healthz`.
+- A suitable `terminationGracePeriodSeconds`.
+- A traffic-draining strategy that accounts for Kubernetes Service and load-balancer propagation.
+- Resource requests and limits.
+
+The current implementation demonstrates application-level shutdown behaviour. End-to-end Kubernetes termination and traffic draining remain to be implemented and verified.
+
+</details>
