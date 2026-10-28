@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-smoke
+  namespace: participant-services
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: smoke
+          image: golang:1.27.3-alpine3.23
+          imagePullPolicy: Never
+          command: [go, run, /smoke/main.go]
+          env:
+            - name: GOCACHE
+              value: /tmp/cache
+            - name: GOPATH
+              value: /tmp/go
+            - name: CGO_ENABLED
+              value: "0"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: client
+              mountPath: /smoke
+              readOnly: true
+            - name: ca
+              mountPath: /certs
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: client
+          configMap:
+            name: smoke-client
+        - name: ca
+          configMap:
+            name: local-ca
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi

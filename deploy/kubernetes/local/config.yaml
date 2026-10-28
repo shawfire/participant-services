@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+data:
+  MULESOFT_URL: http://mockmulesoft:8081
+  JWT_JWKS_URL: https://local-issuer:8443/.well-known/jwks.json
+  JWT_ISSUER: https://local-issuer:8443
+  JWT_AUDIENCE: participant-services
+  SSL_CERT_FILE: /certs/ca-bundle.crt

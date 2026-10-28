@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mockmulesoft
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mockmulesoft
+  template:
+    metadata:
+      labels:
+        app: mockmulesoft
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mockmulesoft
+          image: participant-services-mockmulesoft:local
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8081
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            httpGet:
+              path: /api/participants/P001
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /api/participants/P001
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /api/participants/P001
+              port: http
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mockmulesoft
+spec:
+  type: ClusterIP
+  selector:
+    app: mockmulesoft
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

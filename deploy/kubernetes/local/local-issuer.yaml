@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-issuer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: local-issuer
+  template:
+    metadata:
+      labels:
+        app: local-issuer
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 20
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: local-issuer
+          image: participant-services-localissuer:local
+          imagePullPolicy: Never
+          ports:
+            - name: https
+              containerPort: 8443
+          volumeMounts:
+            - name: issuer-tls
+              mountPath: /certs
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          startupProbe:
+            tcpSocket:
+              port: https
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: https
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: https
+            periodSeconds: 10
+      volumes:
+        - name: issuer-tls
+          secret:
+            secretName: local-issuer-tls
+            defaultMode: 0440
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-issuer
+spec:
+  type: ClusterIP
+  selector:
+    app: local-issuer
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
