@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      target: api
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      MULESOFT_URL: ${MULESOFT_URL:?Set MULESOFT_URL}
+      JWT_JWKS_URL: ${JWT_JWKS_URL:?Set JWT_JWKS_URL}
+      JWT_ISSUER: ${JWT_ISSUER:?Set JWT_ISSUER}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:?Set JWT_AUDIENCE}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "127.0.0.1:8080:8080"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -q
+        - -O
+        - /dev/null
+        - http://127.0.0.1:8080/readyz
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s

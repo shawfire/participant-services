@@ -1,0 +1,21 @@
+.git
+.agents
+.codex
+.aws
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/*_test.go
+docs
+README.md
+DESIGN.md
+bin
+coverage*
+*.out
+.DS_Store
+
+# Runtime configuration, local CA material and backups are never build inputs.
+config/
+*.bak

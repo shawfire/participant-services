@@ -21,3 +21,6 @@ coverage.html
 # Build output
 bin/
 dist/
+
+# Local development identity-provider certificates and keys
+/config/certs/
