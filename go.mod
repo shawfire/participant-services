@@ -6,6 +6,7 @@ tool github.com/99designs/gqlgen
 
 require (
 	github.com/99designs/gqlgen v0.17.98
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/vektah/gqlparser/v2 v2.5.64
 )
 

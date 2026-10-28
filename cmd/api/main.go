@@ -21,6 +21,7 @@ import (
 	"github.com/shawfire/participant-services/graph/portal"
 	portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
 
+	"github.com/shawfire/participant-services/internal/auth"
 	"github.com/shawfire/participant-services/internal/health"
 	"github.com/shawfire/participant-services/internal/integration/mulesoft"
 	"github.com/shawfire/participant-services/internal/observability"
@@ -63,6 +64,39 @@ func run() error {
 	// Readiness: the application can accept traffic.
 	mux.Handle("GET /readyz", readiness)
 
+	// Authentication is mandatory for GraphQL endpoints.
+	jwksURL := os.Getenv("JWT_JWKS_URL")
+	jwtIssuer := os.Getenv("JWT_ISSUER")
+	jwtAudience := os.Getenv("JWT_AUDIENCE")
+
+	if jwksURL == "" || jwtIssuer == "" || jwtAudience == "" {
+		return errors.New(
+			"JWT_JWKS_URL, JWT_ISSUER and JWT_AUDIENCE must be configured",
+		)
+	}
+
+	jwksFetcher, err := auth.NewJWKSFetcher(jwksURL, false)
+	if err != nil {
+		return err
+	}
+
+	jwksCache, err := auth.NewJWKSCache(
+		jwksFetcher,
+		5*time.Minute,
+	)
+	if err != nil {
+		return err
+	}
+
+	jwtVerifier, err := auth.NewCachedJWKSVerifier(
+		jwksCache,
+		jwtIssuer,
+		jwtAudience,
+	)
+	if err != nil {
+		return err
+	}
+
 	mulesoftURL := os.Getenv("MULESOFT_URL")
 	if mulesoftURL == "" {
 		mulesoftURL = defaultMuleSoftURL
@@ -90,7 +124,10 @@ func run() error {
 	portalAPI.AddTransport(transport.Options{})
 	portalAPI.AddTransport(transport.POST{})
 
-	mux.Handle("POST /graphql/portal", portalAPI)
+	mux.Handle(
+		"POST /graphql/portal",
+		auth.RequireJWT(jwtVerifier, portalAPI),
+	)
 	mux.Handle(
 		"GET /playground/portal",
 		playground.Handler("Portal GraphQL", "/graphql/portal"),
@@ -109,7 +146,10 @@ func run() error {
 	mobileAPI.AddTransport(transport.Options{})
 	mobileAPI.AddTransport(transport.POST{})
 
-	mux.Handle("POST /graphql/mobile", mobileAPI)
+	mux.Handle(
+		"POST /graphql/mobile",
+		auth.RequireJWT(jwtVerifier, mobileAPI),
+	)
 	mux.Handle(
 		"GET /playground/mobile",
 		playground.Handler("Mobile GraphQL", "/graphql/mobile"),
