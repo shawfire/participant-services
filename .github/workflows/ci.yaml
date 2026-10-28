@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go tests and vet
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check Go formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            printf '%s\n' "$unformatted"
+            exit 1
+          fi
+      - run: go test -count=1 -race ./...
+      - run: go vet ./...
+      - run: git diff --exit-code -- go.mod go.sum
+
+  configuration:
+    name: Documentation and configuration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: python3 scripts/check_docs.py
+      - name: Check policy example JSON syntax
+        run: |
+          for policy in deploy/aws/examples/*.json.example; do
+            python3 -m json.tool "$policy" > /dev/null
+          done
+      - name: Validate merged Compose configuration without local credentials
+        env:
+          MULESOFT_URL: http://mockmulesoft:8081
+          JWT_JWKS_URL: https://local-issuer:8443/.well-known/jwks.json
+          JWT_ISSUER: https://local-issuer:8443
+          JWT_AUDIENCE: participant-services
+        run: docker compose -f compose.yaml -f compose.local.yaml config --quiet
+      - name: Install checksum-verified kubectl
+        env:
+          KUBECTL_VERSION: v1.36.1
+        run: |
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/kubectl" \
+            "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          curl --fail --silent --show-error --location --output "$RUNNER_TEMP/kubectl.sha256" \
+            "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+          printf '%s  %s\n' "$(cat "$RUNNER_TEMP/kubectl.sha256")" "$RUNNER_TEMP/kubectl" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/kubectl"
+      - name: Render Kubernetes manifests without cluster access
+        run: '"$RUNNER_TEMP/kubectl" kustomize deploy/kubernetes/local > /dev/null'
+      - run: git diff --check
+
+  images:
+    name: Build service images
+    needs: [go, configuration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Build all targets without publishing
+        run: |
+          for target in api localissuer mockmulesoft; do
+            docker build --target "$target" --tag "participant-services-${target}:ci" .
+          done
