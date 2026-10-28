@@ -4,10 +4,10 @@
 
 **Status — 28 October 2026:** local [Docker/Compose packaging](containers.md) is implemented; see the journal for verification. Cloud deployment is not performed. Delivery sequence:
 
-1. Docker images and local Compose for API, issuer and mock are implemented in uncommitted files. Documentation reconciled and approved repeat verification passed: Go HTTPS JWKS retrieval, both authenticated participant queries and invalid-token rejection, including a fresh API cache. The issuer health-probe bypass remains a known limitation.
+1. Docker images and local Compose for API, issuer and mock are committed and pushed as `9a81351`. Documentation reconciled and approved repeat verification passed: Go HTTPS JWKS retrieval, both authenticated participant queries and invalid-token rejection, including a fresh API cache. The issuer health-probe bypass remains a known limitation.
 2. [Minimal local Kubernetes demonstration](kubernetes.md) implemented and verified on kind: three Deployments/ClusterIP Services, configuration/Secret mounts, resources, security settings, probes and an in-cluster authentication Job. EKS deployment, ingress, autoscaling and verified traffic draining remain planned.
 3. [AWS identity/secrets preparation](aws-identity-secrets.md): dedicated unprivileged API service account implemented locally; EKS Pod Identity and exact-secret policy examples prepared. Cloud IAM/CSI integration remains proposed because the API currently has no AWS consumer. Do not add static keys or unused permissions.
-4. [CI validation and image builds](ci.md) implemented in an uncommitted workflow with local equivalent checks passing; hosted execution remains unverified. Automated stack tests, schema checks, scanning, publishing and controlled deployment/rollback remain planned.
+4. [CI validation and image builds](ci.md) committed and pushed as `bd91def` with local checks and the first hosted run passing. Automated stack tests, schema checks, scanning, publishing and controlled deployment/rollback remain planned.
 
 Participant-level authorisation remains unimplemented and must be resolved before exposing participant data beyond this local synthetic lab. PostgreSQL, query limits, N+1/DataLoader exercises, circuit breaking, metrics, distributed tracing and production log aggregation remain future work.
 

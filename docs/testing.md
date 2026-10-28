@@ -215,3 +215,7 @@ On 28 October 2026, local Kustomize rendering and server dry run passed with a d
 ## CI preparation evidence
 
 On 28 October 2026, fresh `go test -count=1 -race ./...`, `go vet ./...`, formatting and module-file checks passed. Local equivalent Compose configuration, Kustomize rendering, policy JSON syntax, documentation checks and all three Docker target builds passed. Actionlint v1.7.7 accepted the new workflow; its optional ShellCheck integration was disabled and shell blocks were syntax-checked separately. A disposable negative Markdown fixture confirmed the checker rejects missing targets, open details and unbalanced sections, then was removed. See [CI](ci.md) for commands and limits. No workflow was committed/pushed or run on GitHub; local macOS/engine results do not prove hosted Ubuntu/AMD64 execution.
+
+## First hosted CI result
+
+On 28 October 2026, GitHub Actions [run 40651138381](https://github.com/shawfire/participant-services/actions/runs/40651138381) for commit `bd91def` completed successfully: documentation/configuration (9 seconds), Go tests/vet (1 minute 36 seconds), and all service image builds (41 seconds). Observed race tests, vet, module-file checks, checksum-verified kubectl installation, Compose validation and Kustomize rendering all passed on hosted Ubuntu/AMD64. Earlier local-only/hosted-unverified statements above describe their historical stage; this run supplies the later hosted evidence. It does not add hosted runtime-stack or AWS verification.

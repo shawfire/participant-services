@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Testing](testing.md) · [Development journal](development-journal.md)
 
-**Implemented:** [.github/workflows/ci.yaml](../.github/workflows/ci.yaml). **Verified locally:** workflow syntax and equivalent Go/configuration/image-build checks. **Not yet verified:** a GitHub-hosted run; these changes are uncommitted and have not been pushed. Publishing and deployment remain planned.
+**Implemented:** [.github/workflows/ci.yaml](../.github/workflows/ci.yaml). **Verified locally:** workflow syntax and equivalent Go/configuration/image-build checks. **Verified on GitHub:** [run 40651138381](https://github.com/shawfire/participant-services/actions/runs/40651138381) passed all three jobs for pushed commit `bd91def` on 28 October 2026. Publishing and deployment remain planned.
 
 <details>
 <summary>Triggers, jobs and permissions</summary>
@@ -67,9 +67,9 @@ The empty shellcheck option disables that optional external tool; Bash syntax wa
 <details>
 <summary>Activation and limits</summary>
 
-After review, commit the complete required working files and push only with explicit authorisation. Then inspect the repository's Actions tab for the first run. Workflow files must exist on the relevant GitHub branch; manual dispatch normally requires the workflow on the default branch. Private repository Actions settings, fork approvals and runner quotas may affect execution. No branch-protection or repository settings were changed.
+The initial workflow was committed and pushed with explicit user authorisation; its first hosted run passed. For subsequent changes, obtain the required authorisation before committing/pushing, then inspect the repository's Actions tab. Workflow files must exist on the relevant GitHub branch; manual dispatch normally requires the workflow on the default branch. Private repository Actions settings, fork approvals and runner quotas may affect execution. No branch-protection or repository settings were changed.
 
-Offline rendering is not Kubernetes API validation, JSON parsing is not IAM permission validation, and a successful image build is not a runtime authentication test. The local [Compose](containers.md) and [Kubernetes](kubernetes.md) authentication exercises remain separate. Hosted CI does not yet run those stacks, scan images/dependencies, check schema compatibility or produce release artifacts. Hosted execution and AMD64 image builds are unverified until observed; the equivalent local build ran on the development engine.
+Offline rendering is not Kubernetes API validation, JSON parsing is not IAM permission validation, and a successful image build is not a runtime authentication test. The local [Compose](containers.md) and [Kubernetes](kubernetes.md) authentication exercises remain separate. Hosted CI does not yet run those stacks, scan images/dependencies, check schema compatibility or produce release artifacts. The first hosted Ubuntu/AMD64 run and all image builds passed; this does not establish multi-platform runtime behaviour.
 
 No CD is implemented. A future publishing/deployment workflow needs reviewed OIDC trust, exact ECR/EKS permissions, environment approval, immutable image promotion and rollback procedures. Participant-level authorisation remains missing, so a passing pipeline does not authorise public exposure.
 

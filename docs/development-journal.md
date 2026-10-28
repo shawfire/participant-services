@@ -1127,3 +1127,18 @@ Added the [documentation change log](documentation-changelog.md) with stable chr
 **Proposed commit boundaries:** Docker/issuer/environment packaging; local Kubernetes and workload-identity/AWS examples; reconciled modular documentation and complete chronological audit; credential-free CI workflow and reusable documentation checker. The final commit series must be checked together before any push. Do not include host certificates, keys, token material or the user's backup. Git staging/commit/push remain pending explicit approval; no commit or push occurred in this review. See DOC-012 in the [documentation change log](documentation-changelog.md).
 
 </details>
+
+<details>
+<summary>Approved commits, push and first hosted CI verification — 28 October 2026</summary>
+
+**Authorisation and scope:** the user explicitly approved committing, pushing and continuing. Rechecked Git state and staged only the agreed files. Reviewed environment files for expected local settings/placeholder URLs; certificate/private-key paths remain ignored. Preserved the user's untracked `compose.before-local-split.yaml.bak` outside all commits.
+
+**Created commits:** `9a81351` Docker Compose/local HTTPS issuer and non-secret environment configuration; `ef72e82` local Kubernetes, service-account and proposed AWS-policy examples; `9885c1a` modular documentation and chronological audit; `bd91def` credential-free CI and documentation checker. Pushed to `origin/main`; the remote advanced from `1797011` to `bd91def`, also publishing the existing lifecycle/logging/authentication/documentation commits already present locally.
+
+**Hosted results observed:** initial run listing was empty immediately after push, then GitHub queued run 40651138381. Monitored it to successful completion. Documentation/configuration passed in 9 seconds, Go tests/vet in 1 minute 36 seconds and all three service image builds in 41 seconds. This includes hosted race tests, vet, formatting/module checks, Markdown/JSON/Compose checks, checksum-verified kubectl installation, Kustomize rendering and Ubuntu/AMD64 builds. No failures required workflow fixes. [Run evidence](https://github.com/shawfire/participant-services/actions/runs/40651138381).
+
+**Current documentation:** corrected current uncommitted/unpushed status statements, recorded commit IDs and hosted evidence, and preserved all previous entries as historical records. Checked current documentation links/anchors, collapsed sections, unchanged journal/change-log prefixes, immutable snapshots and `git diff --check` before the follow-up documentation commit. This follow-up cannot record its own final hash; Git history provides it.
+
+**Remaining scope:** no hosted runtime-stack test, AWS IAM/EKS deployment, image publication or participant-level authorisation is claimed. Existing Compose/kind services and local certificates are unchanged. The only intentionally untracked artefact after the follow-up is the user's preserved Compose backup. Next development should address remaining explicitly documented gaps or a reviewed cloud exercise, not treat passing CI as production readiness.
+
+</details>

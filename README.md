@@ -4,7 +4,7 @@ A synthetic Go/GraphQL middleware lab for the NDIA EL2 Lead/Principal Developer 
 
 Portal and Mobile expose separate GraphQL contracts over a shared participant service and mock MuleSoft HTTP adapter. The working tree implements JWT authentication, bounded retries, JSON logging, request correlation, health/readiness probes and graceful shutdown.
 
-**Status — 28 October 2026:** authentication is implemented and committed as `4a4bec9`. Participant-level authorisation is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) are configured but have not run on GitHub yet. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
+**Status — 28 October 2026:** authentication is implemented and committed as `4a4bec9`. Participant-level authorisation is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) passed their first GitHub-hosted run for `bd91def`. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
 
 ## Quick start
 

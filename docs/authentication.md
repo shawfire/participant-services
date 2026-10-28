@@ -13,7 +13,7 @@
 | `JWT_ISSUER` | Expected issuer; required |
 | `JWT_AUDIENCE` | Expected audience; required |
 
-The API fails startup when these values are absent. The API does not issue tokens. The uncommitted local Compose overlay now includes a development issuer; external providers remain supported. Obtain an RS256 access token from your configured provider with matching issuer/audience, an expiry, a nonempty subject and a `kid` matching its JWKS. The test suite generates temporary keys and tokens locally; see [testing](testing.md).
+The API fails startup when these values are absent. The API does not issue tokens. The local Compose overlay, committed as `9a81351`, includes a development issuer; external providers remain supported. Obtain an RS256 access token from your configured provider with matching issuer/audience, an expiry, a nonempty subject and a `kid` matching its JWKS. The test suite generates temporary keys and tokens locally; see [testing](testing.md).
 
 Send exactly one `Authorization: Bearer <token>` header to either GraphQL POST endpoint. Playground pages remain public development tools; set their Headers panel to JSON containing the Authorization header. Probe requests require no token. Use the [quick start](../README.md#quick-start) and [query examples](graphql.md).
 

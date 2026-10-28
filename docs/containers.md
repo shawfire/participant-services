@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Development journal](development-journal.md)
 
-**Implemented in the uncommitted working tree — 28 October 2026:** API, local HTTPS issuer and mock MuleSoft images. At handover all three services were healthy, but Go JWT/JWKS authentication was still awaiting successful verification. The approved repeat verification subsequently passed against rebuilt images, including a fresh API JWKS cache. See [testing](testing.md#docker-authentication-evidence) for evidence and limits.
+**Committed and pushed as `9a81351` — 28 October 2026:** API, local HTTPS issuer and mock MuleSoft images. At handover all three services were healthy, but Go JWT/JWKS authentication was still awaiting successful verification. The approved repeat verification subsequently passed against rebuilt images, including a fresh API JWKS cache. See [testing](testing.md#docker-authentication-evidence) for evidence and limits.
 
 ## First-time local setup
 
@@ -22,7 +22,7 @@ openssl version
 curl --version
 ```
 
-If already in this checkout, skip cloning. A private repository requires GitHub access. The Docker/issuer files are currently uncommitted, so a remote clone will not include them yet: obtain the reviewed working files or use a revision containing them before continuing. Confirm `Dockerfile`, `compose.yaml`, `compose.local.yaml` and `cmd/localissuer/main.go` exist. Docker/Compose must support `up --wait` and health-conditioned dependencies. Port 8080 must be free.
+If already in this checkout, skip cloning. A private repository requires GitHub access. The Docker/issuer files are available on `main` from commit `9a81351`; use that revision or later. Confirm `Dockerfile`, `compose.yaml`, `compose.local.yaml` and `cmd/localissuer/main.go` exist. Docker/Compose must support `up --wait` and health-conditioned dependencies. Port 8080 must be free.
 
 ### 2. Create local configuration without overwriting existing work
 

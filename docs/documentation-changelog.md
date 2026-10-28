@@ -146,3 +146,12 @@ Updated the container guide after review fixes: the external-provider example no
 **Validation:** required-variable coverage, example-based Compose validation, ignored key paths, backup preservation and explicit Docker context assertions passed. Documentation links/anchors, collapsed sections, history preservation and diff checks passed. No application/runtime changes, commit or push occurred.
 
 </details>
+
+<details>
+<summary>DOC-013 — 28 October 2026 — Record pushed commits and first successful hosted CI</summary>
+
+Updated current README, container, authentication, CI, roadmap and testing status after authorised commit/push. Recorded the four commit IDs and first successful GitHub-hosted run in the journal, keeping historical uncommitted/unverified observations intact. Remote checkout instructions now reflect published files.
+
+**Observed evidence:** run 40651138381 passed all three jobs for `bd91def`. Hosted test/build evidence replaces current uncertainty without claiming runtime/AWS verification. Prior audit content, snapshots, Markdown structure/links and diff checks passed. Certificates/keys and the user's Compose backup were not committed. The follow-up documentation update is within the user's commit/push authorisation.
+
+</details>
