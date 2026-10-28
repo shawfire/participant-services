@@ -13,7 +13,7 @@
 | `JWT_ISSUER` | Expected issuer; required |
 | `JWT_AUDIENCE` | Expected audience; required |
 
-The API fails startup when these values are absent. It does not issue tokens or bundle an identity provider. Obtain an RS256 access token from your configured provider with matching issuer/audience, an expiry, a nonempty subject and a `kid` matching its JWKS. The test suite generates temporary keys and tokens locally; see [testing](testing.md).
+The API fails startup when these values are absent. The API does not issue tokens. The uncommitted local Compose overlay now includes a development issuer; external providers remain supported. Obtain an RS256 access token from your configured provider with matching issuer/audience, an expiry, a nonempty subject and a `kid` matching its JWKS. The test suite generates temporary keys and tokens locally; see [testing](testing.md).
 
 Send exactly one `Authorization: Bearer <token>` header to either GraphQL POST endpoint. Playground pages remain public development tools; set their Headers panel to JSON containing the Authorization header. Probe requests require no token. Use the [quick start](../README.md#quick-start) and [query examples](graphql.md).
 
@@ -53,3 +53,16 @@ Never log tokens, private keys or participant personal information. Use syntheti
 </details>
 
 Verification coverage and its limits are authoritative in [testing](testing.md).
+
+<details>
+<summary>Local HTTPS issuer — implemented fixture, limited assurance</summary>
+
+[cmd/localissuer/main.go](../cmd/localissuer/main.go) loads an RSA TLS private key and uses the same key to sign development JWTs. `POST /dev/token` issues RS256 tokens with `kid=local-dev-key`, subject `participant-123`, audience `participant-services`, issuer `https://local-issuer:8443` and a 15-minute expiry. `GET /.well-known/jwks.json` publishes the matching RSA public key.
+
+Using one key for TLS and signing and exposing an unauthenticated token endpoint are local-fixture shortcuts, not production identity design. No scopes or participant-ownership policy are enforced. A token subject is not proof of entitlement to P001.
+
+The [first-time setup](containers.md#first-time-local-setup) owns CA/key/certificate creation, safe reuse, renewal, configuration, DNS alias, mounts and health-check details. Go's HTTPS client must validate certificate trust, validity and the configured hostname before the JWKS can be accepted. Successful BusyBox diagnostics, a mounted bundle or a healthy issuer alone are insufficient.
+
+At handover, successful end-to-end JWT validation remained pending. A subsequent session check observed valid participant results and invalid-token rejection before the user requested documentation-first approval; see [testing evidence](testing.md#docker-authentication-evidence). The approved repeat verification now passed against rebuilt images and a recreated API with an empty JWKS cache. This confirms the Go/API trust and JWT path for the current local setup, while preserving the historical handover uncertainty. It does not verify production identity operations or resource authorisation.
+
+</details>

@@ -2,7 +2,7 @@
 
 [Documentation index](docs/README.md) · [Development journal](docs/development-journal.md)
 
-**As built — 28 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). No cloud deployment is claimed.
+**As built — 28 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). A [local Kubernetes demonstration](docs/kubernetes.md) now packages the same three services with internal Services, configuration and certificate mounts. The [AWS identity/secrets design](docs/aws-identity-secrets.md) separates end-user authentication from workload permissions; no cloud deployment is claimed.
 
 ```mermaid
 flowchart TD

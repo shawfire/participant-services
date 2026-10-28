@@ -2,6 +2,8 @@
 
 [Project and quick start](../README.md) · [Architecture overview](../DESIGN.md)
 
+**Start here:** [First-time local setup](containers.md#first-time-local-setup), then the [authentication smoke check](testing.md#local-authentication-smoke-check).
+
 | Document | Authoritative scope |
 |---|---|
 | [Authentication](authentication.md) | JWT configuration, verification, JWKS caching and security boundaries |
@@ -10,6 +12,10 @@
 | [Observability](observability.md) | JSON logs, request IDs and propagation |
 | [Health and lifecycle](health-lifecycle.md) | Probes, HTTP timeouts and graceful shutdown |
 | [Testing](testing.md) | Verification commands, coverage and evidence limits |
+| [Containers](containers.md) | Three-service Compose setup, DNS/CA trust, health checks and troubleshooting |
+| [Kubernetes demonstration](kubernetes.md) | Isolated kind setup, manifests, authentication Job and EKS mapping |
+| [AWS identity and secrets](aws-identity-secrets.md) | Verified local service account and proposed EKS/managed-secret design |
+| [Continuous integration](ci.md) | Validation/image-build workflow, local checks and hosted-execution limits |
 | [Roadmap](roadmap.md) | Deployment priorities and proposed extensions |
 | [Development journal](development-journal.md) | Primary continuous audit trail for every development step |
 | [Documentation change log](documentation-changelog.md) | Supporting documentation changes, content movement and verification |

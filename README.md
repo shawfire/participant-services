@@ -4,9 +4,13 @@ A synthetic Go/GraphQL middleware lab for the NDIA EL2 Lead/Principal Developer 
 
 Portal and Mobile expose separate GraphQL contracts over a shared participant service and mock MuleSoft HTTP adapter. The working tree implements JWT authentication, bounded retries, JSON logging, request correlation, health/readiness probes and graceful shutdown.
 
-**Status — 28 October 2026:** authentication is implemented and committed as `4a4bec9`. Participant-level authorisation is not implemented. Docker/Compose, Kubernetes/EKS, AWS IAM/secrets and CI/CD are planned. See [testing](docs/testing.md) for verification evidence and limits.
+**Status — 28 October 2026:** authentication is implemented and committed as `4a4bec9`. Participant-level authorisation is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) are configured but have not run on GitHub yet. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
 
 ## Quick start
+
+**New developers:** follow the [first-time local setup](docs/containers.md#first-time-local-setup) for prerequisites, certificates, configuration, startup, authentication tests and shutdown. Host Go is optional for that path.
+
+The commands below are an alternative for running Go directly with an existing identity provider.
 
 Use Go 1.27.3 as declared in `go.mod`. Run the mock upstream in one terminal:
 
@@ -24,7 +28,7 @@ export MULESOFT_URL='http://localhost:8081'
 go run ./cmd/api
 ```
 
-The example identity-provider URL is a placeholder. There is no bundled identity provider or token issuer; use the [authentication setup](docs/authentication.md) for requirements. Missing JWT configuration prevents API startup. Once running:
+The example identity-provider URL is a placeholder. The local Compose overlay now provides a development issuer; the direct-Go example above still requires a reachable trusted provider. See the [authentication setup](docs/authentication.md) for requirements. Missing JWT configuration prevents API startup. Once running:
 
 ```bash
 curl -i http://localhost:8080/healthz

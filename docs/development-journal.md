@@ -959,3 +959,171 @@ Added the [documentation change log](documentation-changelog.md) with stable chr
 **Remaining work:** create the separate documentation commit after link, structure and preservation checks. No push is authorised in this sequence. Participant authorisation remains absent; delivery priorities remain Docker/Compose, Kubernetes/EKS, IAM/secrets and CI/CD.
 
 </details>
+
+<details>
+<summary>Docker and Compose packaging — 28 October 2026</summary>
+
+**Baseline:** authentication is committed as `4a4bec9`; the documentation refactor and continuous audit rules are committed as `a1a622e`. This entry continues the development chronology without assigning an unconfirmed workflow step number.
+
+**Changes:** added a multi-stage Dockerfile with separate API and mock targets, `.dockerignore`, `compose.yaml` and `.env.example`. Added the [container reference](containers.md), updated README/index/roadmap and testing evidence. Application Go source is unchanged.
+
+**Decisions:** retain Go 1.27.3, static binaries, HTTPS CA trust, non-root UID/GID 65532, read-only filesystems and dropped capabilities. Bind the API only to localhost; keep the mock internal. Require JWT configuration without providing an authentication bypass. Wait for mock health at startup and allow 15 seconds for API termination. No bundled identity provider or signing keys were added.
+
+**Problems and resolution:** Docker access initially failed under the sandbox; an approved daemon check showed Docker Desktop was stopped. Started it with approval, then built and ran the stack. No application changes were needed.
+
+**Verification:** Compose configuration passed with placeholder identity settings and rejected missing JWT configuration. Both images built successfully on the local Docker engine and both service health checks passed. Host probes returned 200; missing-token requests to both GraphQL endpoints returned 401. Every checked response included a request ID. `id` inside the API reported UID/GID 65532. An API-container request to `http://mockmulesoft:8081/api/participants/P001` returned the expected synthetic participant. Compose stop produced API shutdown initiation/completion logs; the test containers and network were removed. Documentation checks and `git diff --check` passed. No Go source changed, so the previously passing Go checks were not repeated.
+
+**Limits and remaining work:** placeholder identity settings do not prove HTTPS JWKS retrieval or valid-token GraphQL requests inside Docker. A real provider/container integration exercise remains required. Multi-platform publishing, vulnerability scanning and digest pinning are unverified. Container files and accompanying documentation remain uncommitted at this entry. No images were published and no Git push occurred. Next priorities are Kubernetes/EKS, IAM/secrets and CI/CD; participant-level authorisation remains absent.
+
+</details>
+
+<details>
+<summary>Local issuer and Docker authentication troubleshooting — 28 October 2026, reconstructed from handover</summary>
+
+**Objective and context:** extend the earlier two-service Docker stage with a local HTTPS RS256 issuer, then authenticate Portal/Mobile queries through the shared service and mock MuleSoft. This missing stage is appended after the earlier Docker entry; no historical text or numbering is replaced.
+
+**Evidence provenance:** the numbered sequence below is supplied by the user's handover, in that order. The repository corroborates the final configuration, not every intermediate failure. No exact timestamps or unprovided command transcripts/error wording are inferred. Where only a symptom was supplied, it is described rather than presented as a verbatim log.
+
+1. **Build — handover:** Docker images for API, local issuer and mock MuleSoft built successfully. The Dockerfile now contains all three targets.
+2. **Initial startup — handover:** all three containers initially reached healthy status. Health alone did not establish token validation or Go JWKS trust.
+3. **Token issuance — handover:** a locally generated RS256 JWT was obtained successfully. The issuer implementation corroborates a local `POST /dev/token` route; its output and key material are not reproduced.
+4. **First authenticated request — handover:** the Portal GraphQL request returned HTTP 401. This confirms rejection, not its exact internal cause; the middleware intentionally returns a generic response.
+5. **Diagnostic tooling — handover:** BusyBox `wget` diagnostics encountered unsupported options, including `--ca-certificate`. This is a tool limitation, not proof of an invalid certificate. No precise earlier command string is available.
+6. **DNS failure — handover:** the API initially could not resolve `local-issuer`; the Compose service was named `localissuer`. The handover identifies the naming mismatch as the DNS cause; earlier raw resolver errors are unavailable.
+7. **DNS correction — handover and current source:** added Docker network alias `local-issuer`, matching the HTTPS URL and certificate hostname while retaining the service name `localissuer`.
+8. **Next diagnostic result — handover:** DNS resolution succeeded, then BusyBox `wget` reported certificate verification failure. This was a distinct failure stage. It did not establish how Go would load trust roots.
+9. **Trust investigation — handover:** `SSL_CERT_FILE` was absent from the running API container. This is a confirmed configuration omission in the handover, but not enough to attribute every earlier 401 conclusively to TLS; Go can also use default trust roots.
+10. **Trust correction — handover and current source:** mounted the local CA bundle at `/certs/ca-bundle.crt` and set `SSL_CERT_FILE=/certs/ca-bundle.crt` in the local API overlay. Rationale: supply the local CA to Go without disabling certificate validation.
+11. **Compose validation failure — handover:** a missing `mockmulesoft` service definition was exposed and restored. The local overlay now contains it; the exact historical Compose error text is unavailable.
+12. **Dependency startup failure — handover:** `localissuer` lacked a health check required by `depends_on: condition: service_healthy`. This is a Compose dependency configuration issue, separate from API token validation.
+13. **Dependency correction — handover and current source:** restored the issuer health check and hardening. The inspected source uses a loopback `wget` probe with `--no-check-certificate`; record this existing limitation explicitly. It does not bypass the API's Go TLS validation and cannot prove certificate trust.
+14. **Final startup — handover:** Compose validation/startup succeeded and all three containers were healthy. Repository-session inspection later independently observed a valid merged configuration and all three services healthy.
+15. **Final trust prerequisites — handover:** the running API was verified to have `SSL_CERT_FILE=/certs/ca-bundle.crt`, with the mounted bundle readable. Current overlay source corroborates those settings. No broader trust-resolution claim follows from readability alone.
+16. **Handover boundary:** successful end-to-end JWT authentication was still awaiting verification. Preserve that boundary; do not retroactively replace it with later observations.
+
+**Implementation details confirmed by inspection:** `compose.yaml` is API-only; `compose.local.yaml` adds the issuer/mock and CA mount. `config/local.env` selects HTTPS JWKS and matching issuer/audience. Issuer certificate SAN contains `DNS:local-issuer`. The Go fetcher still requires HTTPS, rejects redirects, and performs normal TLS validation. The JWT verifier validates RS256 signatures and configured claims. `APP_ENV`/`LOG_LEVEL` are configured in Compose but not consumed by API code. No participant-level authorisation exists.
+
+**Commands/evidence limits:** the original handover does not provide full historical commands for steps 1–16. Current maintained commands are documented in [containers](containers.md) and [testing](testing.md); they are not fabricated historical transcripts. Remaining work at this boundary: verify a valid token and invalid rejection through the Go/API path and query actual participant data before moving to Kubernetes.
+
+</details>
+
+<details>
+<summary>Repository reconciliation and scope correction — 28 October 2026</summary>
+
+**Initial inspection:** authentication commit `4a4bec9` and documentation commit `a1a622e` are present. Existing Docker, issuer, config and documentation work is uncommitted. Inspected the requested nine documentation files, Git history/diffs, Compose files, issuer implementation, JWT middleware/verifier and JWKS fetch/cache code. Earlier two-service statements are historical; current references now describe the three-service overlay.
+
+**Observed checks before documentation-only steering:** merged Compose `config --quiet` passed and `ps` showed three healthy containers. The temporary Python/wget token attempt failed with `wget: unrecognized option: ca-certificate=/certs/ca-bundle.crt`; it did not send a verified token request. A temporary Go client then ran on the Compose network, obtained a token using explicit CA/hostname validation, and sent actual P001 participant queries. Portal and Mobile each returned 200 with expected data and no GraphQL errors; tampered-signature, malformed and missing-token requests each returned 401 on both routes. Request IDs were present. No tokens or private keys were printed. `go test -count=1 -race ./...` and `go vet ./...` completed successfully before the temporary source edit. These are later observations, not claims about the handover state.
+
+**Premature development and correction:** before the user requested documentation-first approval, the assistant temporarily added a Go-based issuer TLS health probe, a CA mount for that probe, broader Docker context exclusions and a reusable smoke source, then launched `up -d --build --wait`. On the scope correction, restored issuer source, local Compose and Docker ignore contents to captured pre-turn hashes and removed only the newly introduced smoke source. All pre-existing uncommitted work was preserved. The already-started rebuild subsequently completed and reported three healthy services with the temporary issuer image/configuration. Source restoration did not recreate containers; the live issuer may therefore differ from the restored source. This drift requires explicit reconciliation in the next approved verification stage. No further Docker mutation or JWT checks were performed after the documentation-only instruction.
+
+**Documentation decisions:** append the missing handover chronology without rewriting existing entries; separate handover, inspected-source and observed-run evidence. Update container/authentication/testing references, roadmap and navigation. A proposed repeatable Go client is documented, not installed into the application. See DOC-006 in the [documentation change log](documentation-changelog.md).
+
+**Verification for this documentation stage:** checked Markdown paths/anchors and collapsed sections, unchanged journal/change-log prefixes, immutable snapshots, preserved original journal blocks and `git diff --check`. This stage does not add a new application-test or live-JWT result.
+
+**Remaining work and approval boundary:** present the documentation proposal for user approval before continuing JWT verification or resolving live/source drift. Do not commit or push. After approved Docker verification, the next implementation priority is a minimal Kubernetes demonstration suitable for explaining EKS concepts. Participant-level authorisation remains missing.
+
+</details>
+
+<details>
+<summary>First-time developer setup documentation — 28 October 2026</summary>
+
+**Objective:** close onboarding gaps so a developer can prepare and run the local three-service prototype without pre-existing certificates or an external identity provider. The user requested documentation changes only; no further live JWT or Kubernetes work was undertaken.
+
+**Problem and cause:** the earlier guide assumed provisioned certificate files and local environment configuration. Root `.env.example` still targets an external issuer and lacks `MULESOFT_URL` required by the current base Compose file. The authentication helper required manual creation of a temporary Go file. Those assumptions prevented a complete first-time walkthrough.
+
+**Documentation corrections:** added an ordered path for prerequisites/checkout, preserved-or-created local configuration, local CA/RSA issuer certificate generation with `DNS:local-issuer`, bundle creation, certificate verification, startup, authentication checks, tests and shutdown. Added renewal with preserved backups. Defined a Compose function with fixed project/network name and explicit environment-file precedence. Documented private-directory/key permissions for UID 65532, the existing health-probe limitation, optional host Go and a Debian Go image alternative for race tests. Converted the documented smoke client into a single shell block using a new temporary directory. Updated README/index/authentication navigation; commands remain authoritative in the container/testing references.
+
+**Decisions and limits:** certificate creation refuses to overwrite an existing certificate directory; existing config is retained. The local CA is not installed into OS trust. The local issuer key is readable via its bind mount for the non-root container, while its host parent directory is mode 700 and CA key mode 600. This remains a synthetic local-only identity fixture without participant-level authorisation. Docker/issuer files are still uncommitted, so the guide explicitly states that cloning the current remote alone does not supply the working-tree additions.
+
+**Observed documentation validation:** all Bash blocks in container/testing references passed `bash -n`. Executed the exact certificate-generation block in an isolated temporary checkout directory: RSA keys/certificates were created; OpenSSL CA-chain, server-purpose and `local-issuer` hostname validation passed. Checked documented permissions and reran the block; all generated files retained identical hashes. Existing project certificates and running containers were untouched. Relative paths/anchors, collapsed sections, unchanged prior journal/change-log prefixes, original journal blocks, immutable snapshots and `git diff --check` passed.
+
+**Remaining work:** review/approve documentation, then reconcile source/runtime state and repeat the full live authentication check. The complete new-developer Docker walkthrough has not been rerun end to end during this documentation stage. No application code, Compose configuration or dependencies changed; no commit or push occurred. See DOC-007 in the [documentation change log](documentation-changelog.md).
+
+</details>
+
+<details>
+<summary>Approved Docker JWT verification against preserved source — 28 October 2026</summary>
+
+**Objective and approval:** after the documentation-first reconciliation and onboarding instructions, the user asked to continue. Resumed the planned end-to-end checks without committing, publishing images or starting Kubernetes development.
+
+**Source/runtime reconciliation:** validated the two-file local Compose configuration, then ran `docker compose --project-name participant-services --env-file config/local.env -f compose.yaml -f compose.local.yaml up -d --build --wait`. All three images built and services became healthy. The issuer was recreated from the restored original source, replacing the earlier temporary health-probe image. Checked all running image IDs against the rebuilt tagged images; they matched. No source edits were needed.
+
+**Actual authentication test:** extracted the exact shell block from `docs/testing.md` and ran it against the local stack. Its temporary Go helper fetched an RS256 token over CA/hostname-validated HTTPS and kept it in memory. Both Portal and Mobile P001 participant queries returned HTTP 200 and the exact expected synthetic data with no GraphQL errors. Tampered-signature, malformed and missing-token requests returned HTTP 401 on each endpoint. Request IDs were present. No token, private key or secret environment output was displayed.
+
+**Fresh-cache verification:** recreated only the API using the same Compose options with `up -d --force-recreate --no-deps --wait api`, then reran the exact documented helper. All eight checks passed again. Because the new process had an empty JWKS cache, valid participant results establish a fresh Go HTTPS JWKS/signature-validation path for this setup, not just cached trust or a BusyBox diagnostic. The handover's unresolved state remains preserved historically.
+
+**Other observed checks:** `go test -count=1 -race ./...` and `go vet ./...` completed successfully. The API environment contained the expected `SSL_CERT_FILE`; the mounted file was readable. Public `/healthz` and `/readyz` returned 200 with request IDs. All three containers were healthy. Existing certificates and user configuration were preserved. Markdown links/anchors, collapsed section structure, prior journal/change-log prefixes and `git diff --check` passed.
+
+**Documentation:** updated current authentication, container, testing and roadmap status with the approved verification outcome; see DOC-008 in the [documentation change log](documentation-changelog.md).
+
+**Limits and next steps:** participant-level authorisation is still absent. The existing issuer health check still bypasses certificate validation even though the API and test helper do not. Local token issuance is an unauthenticated development fixture and reuses the TLS signing key. No production security assurance, Docker rotation exercise, clean-checkout end-to-end run or Kubernetes deployment is claimed. The stack is left running for local development. All existing uncommitted work remains; no commit or push was made. Next priority is a minimal demonstrable Kubernetes deployment explaining EKS concepts.
+
+</details>
+
+<details>
+<summary>Minimal local Kubernetes demonstration — 28 October 2026</summary>
+
+**Objective and context:** after verified Docker/JWT integration, prepare a minimal demonstrable Kubernetes deployment for explaining EKS concepts. Preserve the Compose setup and existing uncommitted work. No AWS provisioning, image publication, commit or push was authorised or performed.
+
+**Initial assessment:** kubectl v1.36.1 was installed, but no kubeconfig contexts or kind/minikube executables were available. Installed kind v0.33.0 into `/tmp/participant-k8s-tools` with approval, then created an isolated Docker-based cluster named `participant-services` with `/tmp/participant-services-kubeconfig`. The node runs Kubernetes v1.37.0. The normal kubeconfig was not modified.
+
+**Implementation:** added `deploy/kubernetes/local/` with a restricted namespace, API configuration, three single-replica Deployments/ClusterIP Services and a separate authentication Job. Added `docs/kubernetes.md` with prerequisites, image build/load commands, Secret/CA setup, rollout checks, authentication testing, port-forward access, cleanup and EKS mapping. Updated current overview/navigation, roadmap and testing evidence. No application or Compose source changed.
+
+**Decisions:** use the existing TLS/JWT behaviour and certificate hostname `local-issuer`; keep issuer/mock internal. Generate the local certificate Secret and CA ConfigMap from existing ignored files without persisting Secret YAML. The CA private key remains on the host. Apply non-root UID/GID 65532, fsGroup for group-readable Secret mounts, disabled service-account token mounting, dropped capabilities, read-only root filesystems, RuntimeDefault seccomp and resource requests/limits. Set imagePullPolicy Never for loaded kind images; ECR publication remains future work. API probes use its health/readiness routes, mock probes read synthetic P001 and issuer probes check TCP reachability without pretending to verify certificate trust. End-to-end verification belongs to the Job.
+
+**Failure and confirmed root cause:** the first generated CA ConfigMap apply was rejected: `metadata.annotations: Too long: may not be more than 262144 bytes`. Client-side apply tried to duplicate the existing large CA bundle in its last-applied annotation. Switched generated Secret/ConfigMap commands to server-side apply with a dedicated field manager. The retry succeeded without changing the certificate bundle. The runbook records the corrected commands.
+
+**Commands and observed results:** `kubectl kustomize deploy/kubernetes/local` rendered successfully. Loaded the already-built API/issuer/mock images plus the Go test image into kind. Namespace/Secret/CA setup and `kubectl apply --dry-run=server -k deploy/kubernetes/local` passed; applied manifests and waited for all three rollouts, which became ready with zero initial restarts. The test Job also passed server dry run, then completed successfully. It used the existing documented Go client with CA/hostname validation: Portal and Mobile participant queries returned 200 and expected P001 data; tampered-signature, malformed and missing tokens returned 401 on each endpoint. Tokens and keys were not printed. The API began as a new process with an empty JWKS cache. Brief localhost port-forwarding on 18080 returned 200 with request IDs from `/healthz` and `/readyz`; the forward was stopped.
+
+**Documentation verification:** checked current Markdown links/anchors, collapsed sections, shell examples, unchanged prior journal/change-log prefixes and snapshots, and `git diff --check`. Application Go was unchanged, so the previously passing race tests and vet were not repeated for manifest-only work. See DOC-009 in the [documentation change log](documentation-changelog.md).
+
+**Limitations and next steps:** the cluster remains running for demonstration; cleanup commands remove only the named kind cluster/namespace. Compose and host certificates remain intact. One replica and illustrative resource values are not production sizing or high availability. No network policy, ingress, autoscaling, AWS IAM/managed secrets, ECR or EKS deployment is implemented. Kubernetes traffic draining is not verified. Participant-level authorisation remains absent; the local issuer remains an unauthenticated synthetic fixture reusing its TLS key for signing. Next priorities are workload IAM/secrets and a controlled EKS deployment design, then CI/CD; do not expose this lab publicly. All files remain uncommitted pending review.
+
+</details>
+
+<details>
+<summary>Workload identity and managed-secrets preparation — 28 October 2026</summary>
+
+**Objective:** follow the local Kubernetes demonstration with a minimal AWS identity/secrets design, implementing only what can be justified and validated locally. Preserve existing uncommitted work and avoid AWS provisioning or credential introduction.
+
+**Assessment and decision:** the API has no AWS SDK calls or secret-backed upstream credential consumer. Its issuer URL/audience/JWKS and CA are configuration, not application AWS credentials. Granting IAM or Secret-read permissions now would add unused access. Added a dedicated `participant-api` Kubernetes service account with automatic token mounting disabled, selected it in the API Deployment and left RBAC grants absent. The issuer receives its existing Secret as a volume; the API needs public JWKS, not issuer-key access.
+
+**Prepared design:** added `docs/aws-identity-secrets.md` covering end-user/Kubernetes/AWS identity boundaries, least-privilege policy scope, future Pod Identity association, managed-secret delivery/reload decisions and cloud acceptance criteria. Added two non-deployable JSON examples under `deploy/aws/examples/`: a Pod Identity trust policy constrained by cluster/namespace/service-account tags and an exact-secret read/describe policy. Placeholders remain explicit; no role, policy, secret or EKS association was created. Current AWS primary documentation informed the examples; references are linked in the guide. AWS CLI is installed but no AWS account/API calls were needed or performed.
+
+**Verification:** Kustomize rendering and API-server dry run passed, manifests applied to the isolated kind cluster, and API rollout completed. Checked the selected service account and disabled automatic token flag; the default Kubernetes API-token file was absent. `kubectl auth can-i get secrets --as=system:serviceaccount:participant-services:participant-api` returned `no`/exit 1 as expected. Recreated only the disposable authentication test Job; it completed with valid Portal/Mobile participant queries returning expected data and tampered, malformed and missing tokens rejected on both routes. No tokens or secrets were printed. Policy examples parsed as JSON and runbook shell syntax passed; this is not AWS authorization validation. Documentation links/anchors, collapsed sections, previous journal/change-log prefixes, snapshots and `git diff --check` passed. No application Go changes required repeating the already-passing Go suite.
+
+**Problems and limits:** no deployment failure occurred in this stage. The main boundary is lack of a real AWS consumer/account-specific deployment, so cloud permission tests cannot be claimed from kind. Pod Identity/Secrets Manager/CSI/KMS integration is proposed, and named service accounts do not add network isolation or participant authorisation. The local cluster and Compose stack remain available. No commit or push occurred.
+
+**Next steps:** add credential-free CI validation/build automation, or prepare a reviewed cloud exercise only after selecting account/region, supported cluster compute, cost limit, operator identity, one synthetic secret consumer and cleanup owner. Preserve participant-level authorisation as an outstanding security requirement before public exposure. See DOC-010 in the [documentation change log](documentation-changelog.md).
+
+</details>
+
+<details>
+<summary>Credential-free CI validation and image builds — 28 October 2026</summary>
+
+**Objective:** add repeatable validation/build automation after local Docker/Kubernetes verification, without cloud credentials, registry publication or deployment authority. Preserve existing uncommitted work and the continuous audit.
+
+**Assessment and implementation:** no `.github` workflow existed. Added `.github/workflows/ci.yaml` with pull-request, main-push and manual triggers; read-only contents permission; timeouts/concurrency cancellation; Go formatting, race tests, vet and module-file checks; documentation/JSON/Compose/Kustomize checks; and all three image target builds after validation. Both official actions are pinned to commit hashes resolved from their v6 tags, and checkout credentials are not persisted. Kubectl is versioned and checksum-verified. No AWS permissions, registry login, secret values, cluster access or publishing/deployment steps were introduced.
+
+**Documentation tooling:** added a small Python-standard-library checker for current local Markdown paths/anchors and collapsed/balanced details sections. Immutable snapshots retain their original link context and are excluded from path/anchor checks while still checked structurally. The checker does not request external URLs or rewrite content. Added `docs/ci.md` with workflow scope, local equivalent commands, activation conditions and evidence limits; updated README/index/roadmap/testing.
+
+**Observed verification:** fresh `go test -count=1 -race ./...`, `go vet ./...`, formatting and unchanged module-file checks passed. Ran local merged Compose validation with non-secret explicit values, Kustomize rendering and all three Docker target builds with `:ci` tags; they passed without changing running stacks. IAM example JSON parsing and documentation checks passed. Actionlint v1.7.7 accepted the workflow; optional ShellCheck was disabled, with multiline shell/runbook Bash syntax checked separately. A disposable negative Markdown fixture confirmed missing-link, open-section and unbalanced-section failures and was removed. No application module dependencies were changed by installing the temporary lint tool. Previous journal/change-log prefixes, snapshots, original journal entries and `git diff --check` passed preservation checks.
+
+**Problems and evidence boundaries:** no runtime failure was observed in this stage. The workflow is uncommitted and has never run on GitHub, so hosted runner/tool-install behaviour, Actions settings and AMD64 builds are not claimed as verified. Local Docker builds used the development engine and cached layers. Offline manifest/JSON checks are not API-server/IAM validation. Automated Compose/kind authentication runs, image/dependency scanning, schema compatibility, release publication and CD remain future work.
+
+**Remaining work:** review the accumulated implementation and documentation before any commit or push. Once explicitly authorised and published, observe the first hosted run before calling CI verified on GitHub. Future CD needs a concrete OIDC/ECR/EKS permission and rollback design; participant-level authorisation remains missing. Local Compose/kind services and existing certificates remain untouched. See DOC-011 in the [documentation change log](documentation-changelog.md).
+
+</details>
+
+<details>
+<summary>Accumulated-change review and commit preparation — 28 October 2026</summary>
+
+**Objective:** review the completed local deployment/CI preparation before requesting permission to commit. Preserve all existing uncommitted work and avoid inventing a further cloud feature or treating earlier continue instructions as commit authorisation.
+
+**Findings and corrections:** the external-provider `.env.example` lacked `MULESOFT_URL`, which the current base Compose file requires; added a placeholder upstream URL and clarified that the bundled local stack uses `config/local.env`. The Docker ignore rules excluded private-key patterns but still admitted the local configuration directory and historical backup into the context; excluded `config/` and `*.bak`, then updated the container guide. Runtime bind mounts are unaffected. The user's `compose.before-local-split.yaml.bak` remains intact and is excluded from the proposed commit set. No application logic changed.
+
+**Observed validation:** the example now supplies all four required API variables and base Compose validation with that file passed. Existing CA/issuer key paths remain ignored by Git. A temporary Docker context-check build first failed before reading its Dockerfile with a `/private/tmp` metadata/xattr permission error. Passing the same Dockerfile through stdin avoided that host-file metadata issue; the build then proved config and backup absence and required source/module-file presence without printing contents. Running services were unchanged. Current Markdown links/anchors, collapsed sections, previous journal/change-log prefixes and `git diff --check` passed. Broader Go/runtime checks from the preceding stages remain their recorded evidence; they were not repeated for these example/ignore changes.
+
+**Proposed commit boundaries:** Docker/issuer/environment packaging; local Kubernetes and workload-identity/AWS examples; reconciled modular documentation and complete chronological audit; credential-free CI workflow and reusable documentation checker. The final commit series must be checked together before any push. Do not include host certificates, keys, token material or the user's backup. Git staging/commit/push remain pending explicit approval; no commit or push occurred in this review. See DOC-012 in the [documentation change log](documentation-changelog.md).
+
+</details>
