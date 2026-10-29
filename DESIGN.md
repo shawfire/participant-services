@@ -2,7 +2,7 @@
 
 [Documentation index](docs/README.md) · [Development journal](docs/development-journal.md)
 
-**As built — 29 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). A [local Kubernetes demonstration](docs/kubernetes.md) now packages the same three services with internal Services, configuration and certificate mounts. The [AWS identity/secrets design](docs/aws-identity-secrets.md) separates end-user authentication from workload permissions; no cloud deployment is claimed.
+**As built — merged implementation, reviewed 30 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). A [local Kubernetes demonstration](docs/kubernetes.md) now packages the same three services with internal Services, configuration and certificate mounts. The [AWS identity/secrets design](docs/aws-identity-secrets.md) separates end-user authentication from workload permissions; no cloud deployment is claimed.
 
 ```mermaid
 flowchart TD
@@ -48,7 +48,7 @@ The service currently combines in-memory and injected repository access strategi
 
 Propagate request contexts, bound concurrency and connection pools, and use typed service errors with safe API translation. Use request-scoped batching where needed, avoid unbounded request goroutines, and retry only safe operations. Production metrics, tracing and SLOs remain planned.
 
-Proposed team practices include PR reviews, schema compatibility checks, threat modelling, dependency/security scanning, incident playbooks and rollback criteria. AI-generated changes require human review, especially authentication, authorisation, error disclosure and resource cleanup.
+Proposed team practices include PR reviews, schema compatibility checks, threat modelling, dependency/security scanning, incident playbooks and rollback criteria. AI-generated changes require human review, especially authentication, authorisation, error disclosure and resource cleanup. The [AI-assisted engineering guide](docs/ai-assisted-engineering.md) describes the bounded reference slice and actual control limits.
 
 </details>
 

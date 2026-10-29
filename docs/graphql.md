@@ -14,7 +14,7 @@ Separate Portal and Mobile schemas are implemented. Both use the same participan
 
 The source contracts are [Portal schema](../graph/portal/schema.graphqls) and [Mobile schema](../graph/mobile/schema.graphqls). Participant results are nullable: domain `ErrNotFound` maps to `null`; authorisation failures return a generic `FORBIDDEN` error with a null field; other service errors propagate through GraphQL. Mobile combines first and last names into `displayName`.
 
-Caller-supplied IDs are checked against the trusted mapping under the [self-access policy](authorisation.md). Plans, submissions, field access policies, depth/complexity limits and DataLoader batching are not implemented. See [authentication](authentication.md).
+Caller-supplied IDs are checked against the trusted mapping under the [self-access policy](authorisation.md). Plans, submissions, field permissions, depth and complexity limits and DataLoader batching are not implemented. See [authentication](authentication.md).
 
 </details>
 

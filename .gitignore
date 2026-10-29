@@ -24,3 +24,6 @@ dist/
 
 # Local development identity-provider certificates and keys
 /config/certs/
+
+# Preserve the local pre-split Compose backup without publishing it.
+/compose.before-local-split.yaml.bak

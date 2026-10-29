@@ -178,3 +178,21 @@ Updated current authorisation/README status to identify the review branch and im
 Added PR #1, branch/base and commit references to the chronological journal and current testing evidence. Recorded observed initial hosted-check status without claiming an unfinished image build passed. Previous journal/change-log entries remain unchanged; PR description provides the consolidated review context. No merge or secret/backup publication occurred.
 
 </details>
+
+<details>
+<summary>DOC-017 — 30 October 2026 — Prepare the synthetic reference implementation for public review</summary>
+
+**Changes:** current README now leads with the small independent Go/GraphQL reference slice, demonstrations, limits, canonical onboarding and the legacy scaffold distinction. Added and linked the AI-assisted engineering guide, SECURITY.md, owner-approved MIT LICENSE and upstream attribution notices. Updated current merged-PR/index/architecture/roadmap status; moved useful native-Go commands into the container reference while retaining the README quick-start anchor. The checker now covers all root Markdown files. Exact historical Gitleaks false-positive fingerprints and a Git-ignore entry protect the reviewed scan and preserved local backup respectively. Rephrased current GraphQL prose to avoid its scanner false positive; historical versions remain unchanged.
+
+**Publication decisions:** owner confirmed historical interview/briefing and personal-metadata retention, MIT authority and copyright holder, and chose GitHub private reporting. Reporting remains unverified while private and must be activated/checked during a separately approved visibility transition. No licence was applied to third-party dependencies by implication; their notices remain authoritative.
+
+**Evidence:** initial history/candidate scans exited 1 on reviewed explanatory prose; narrow historical exceptions and current wording correction produced final exit-0 scans. Initial missing quick-start links were corrected. Race tests, vet, formatting, Compose validation, Kustomize render, workflow lint, policy JSON, shell syntax, current documentation and preservation/diff checks passed. API reporting lookup returned 404; clean-checkout/live-runtime/new hosted-CI/vulnerability scans were not performed. Prior journal/change-log content and snapshots remain intact. No application/security behaviour change, staging, commit, push, visibility change or backup deletion occurred.
+
+</details>
+
+<details>
+<summary>DOC-018 — 30 October 2026 — Record final publication-diff approval</summary>
+
+Recorded owner authorisation for the exact preparation commit/push and final secret/history/licensing checks. Adjusted current status wording so it remains accurate across that approved commit. Previous publication-preparation observations remain historical and unchanged. Video planning will be separate uncommitted work; no visibility or announcement authorisation is implied.
+
+</details>

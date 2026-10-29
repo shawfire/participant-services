@@ -1,0 +1,4 @@
+# Reviewed historical false positives: explanatory GraphQL policy prose.
+# Exact commit/file/rule/line fingerprints only; future findings are not suppressed.
+c90e7827514a2492743f29b529c4e3f9add84d70:docs/graphql.md:generic-api-key:17
+a1a622e5505d8159821057a9d41d2aff96e1db62:docs/graphql.md:generic-api-key:17

@@ -218,3 +218,30 @@ The API has 15 seconds to stop against its 10-second shutdown deadline. Mock/iss
 The full chronological sequence, evidence sources and remaining uncertainty are preserved in the [journal](development-journal.md). A historical Compose backup is retained as user work; use the current two-file configuration for maintained instructions. Test commands and outcomes belong in [testing](testing.md).
 
 </details>
+
+## Native Go alternative
+
+<details>
+<summary>Run without Docker using an existing identity provider</summary>
+
+Use Go 1.27.3. The provider must be reachable from your host and supply a trusted HTTPS JWKS endpoint plus matching issuer/audience. Participant reads also require a signed `participant_id` claim; examples querying P001 require `participant_id=P001`. These URLs are placeholders, not an installed provider.
+
+In one terminal, from the repository root:
+
+```bash
+go run ./cmd/mockmulesoft
+```
+
+In another terminal:
+
+```bash
+export JWT_JWKS_URL='https://your-identity-provider.example/.well-known/jwks.json'
+export JWT_ISSUER='https://your-identity-provider.example/'
+export JWT_AUDIENCE='participant-services'
+export MULESOFT_URL='http://localhost:8081'
+go run ./cmd/api
+```
+
+Do not run the Docker API simultaneously on port 8080. Probe `/healthz` and `/readyz` using the commands above, then use the [authenticated queries](graphql.md) with a valid mapped token. Missing JWT configuration prevents startup. Stop each Go process with `Ctrl+C`. These Go servers listen on all interfaces; restrict access to your local development machine/network and do not expose the fixtures publicly. The root `server.go` Todo scaffold is a different, unauthenticated tutorial entry point.
+
+</details>

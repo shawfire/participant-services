@@ -33,7 +33,7 @@ def anchors(text):
 
 def main():
     errors = []
-    files = [ROOT / "README.md", ROOT / "DESIGN.md", *sorted((ROOT / "docs").rglob("*.md"))]
+    files = [*sorted(ROOT.glob("*.md")), *sorted((ROOT / "docs").rglob("*.md"))]
     for path in files:
         text = prose(path.read_text())
         label = path.relative_to(ROOT)

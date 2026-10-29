@@ -1,49 +1,47 @@
 # Participant Services
 
-A synthetic Go/GraphQL middleware lab for the NDIA EL2 Lead/Principal Developer interview (RFQ LH-07533). This independent learning project is not an NDIA system or a claim of NDIA production experience.
+A focused Go/GraphQL reference implementation exploring authenticated APIs, participant self-access, shared application services and resilient HTTP integration. It uses synthetic data and a mock enterprise backend.
 
-Portal and Mobile expose separate GraphQL contracts over a shared participant service and mock MuleSoft HTTP adapter. The working tree implements JWT authentication, bounded retries, JSON logging, request correlation, health/readiness probes and graceful shutdown.
+Independently developed after an NDIA Lead/Principal Developer interview exercise. This is not an NDIA system, an endorsed solution or evidence of NDIA production experience. The complete development history remains available, including the original interview context.
 
-**Status — 29 October 2026:** authentication is implemented and committed as `4a4bec9`. [Participant self-access](docs/authorisation.md) is implemented on the review branch; staff/delegate access is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) passed their first GitHub-hosted run for `bd91def`. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
+## What it demonstrates
+
+- Separate Portal and Mobile GraphQL contracts over one participant service.
+- RS256 JWT validation through trusted HTTPS JWKS, key caching and rotation handling.
+- Shared-service self-access using a signed participant mapping, with cross-participant denial before upstream calls.
+- A MuleSoft-style HTTP adapter and local mock, cancellation, bounded retries and request correlation.
+- JSON logging, health/readiness probes and graceful HTTP shutdown.
+- Local Docker/kind demonstrations, reproducible tests and credential-free CI image builds.
+- Incremental [AI-assisted engineering](docs/ai-assisted-engineering.md) with reviewable changes and an append-only development audit.
+
+The reference slice is intentionally small: retrieve a synthetic participant through two consumer contracts. It is an example to understand and adapt, not a complete participant platform or production security template.
 
 ## Quick start
 
-**New developers:** follow the [first-time local setup](docs/containers.md#first-time-local-setup) for prerequisites, certificates, configuration, startup, authentication tests and shutdown. Host Go is optional for that path.
+Follow the [first-time local setup](docs/containers.md#first-time-local-setup), then run the [token-safe authentication and authorisation check](docs/testing.md#local-authentication-smoke-check). The guide includes prerequisites, certificates, configuration, startup, renewal and shutdown. Docker supplies the Go toolchain; host Go is optional for that path.
 
-The commands below are an alternative for running Go directly with an existing identity provider.
-
-Use Go 1.27.3 as declared in `go.mod`. Run the mock upstream in one terminal:
-
-```bash
-go run ./cmd/mockmulesoft
-```
-
-In a second terminal, configure your trusted identity provider and start the API. Replace the example values with an actual HTTPS JWKS endpoint, issuer and audience:
-
-```bash
-export JWT_JWKS_URL='https://your-identity-provider.example/.well-known/jwks.json'
-export JWT_ISSUER='https://your-identity-provider.example/'
-export JWT_AUDIENCE='participant-services'
-export MULESOFT_URL='http://localhost:8081'
-go run ./cmd/api
-```
-
-The example identity-provider URL is a placeholder. The local Compose overlay now provides a development issuer; the direct-Go example above still requires a reachable trusted provider. See the [authentication setup](docs/authentication.md) for requirements. Missing JWT configuration prevents API startup. Once running:
-
-```bash
-curl -i http://localhost:8080/healthz
-curl -i http://localhost:8080/readyz
-```
-
-See [authenticated GraphQL queries](docs/graphql.md) for Portal and Mobile requests. Stop with `Ctrl+C`. For an automated local check requiring no external identity provider:
+With Go 1.27.3 installed, tests run without an external identity provider:
 
 ```bash
 go test -count=1 -race ./...
 go vet ./...
+python3 scripts/check_docs.py
 ```
 
-## Documentation
+**Choose the correct entry point:** `go run ./cmd/api` serves the protected participant API and requires JWT configuration. Root `server.go` is a separate legacy Todo tutorial: it is unauthenticated, has unsynchronised mutable state and must not be exposed publicly. See the [native Go alternative](docs/containers.md#native-go-alternative) for an existing provider.
 
-Start with the [documentation index](docs/README.md) or [architecture overview](DESIGN.md). The [development journal](docs/development-journal.md) is the continuous audit trail for every development step, preserving commands, failures, decisions and verification results from initial setup onward. Follow the [maintenance rules](docs/history/README.md#maintenance-rules) as work continues. Complete pre-refactor documents are in [historical snapshots](docs/history/README.md). Next priorities are recorded in the [roadmap](docs/roadmap.md).
+## Scope and verification
 
-Use synthetic participant data only. Never commit credentials, tokens, private keys, real participant information or secret-bearing `.env` files. Keep this synthetic prototype local; self-access alone does not establish production readiness. Interview examples should distinguish lab exercises from professional production experience.
+Participant self-access is merged via [PR #1](https://github.com/shawfire/participant-services/pull/1). [Merged-main CI](https://github.com/shawfire/participant-services/actions/runs/40831913830) passed; local Docker/kind checks are recorded in [testing](docs/testing.md). Publication-preparation checks are recorded in [testing](docs/testing.md#publication-preparation--30-october-2026); current hosted results belong to the commit being reviewed.
+
+Staff/delegate policies, entitlement provisioning/revocation, production identity operations, query/rate limits, persistence and production traffic management remain outside this implementation. AWS/EKS and managed-secrets integration are proposed, not deployed. CI does not run the complete container onboarding flow, and no full clean-checkout onboarding result is claimed.
+
+The local issuer is an unauthenticated development fixture that reuses its TLS key for signing. Its Compose health probe skips TLS verification; the API's Go JWKS client validates TLS. These limitations and further deployment gaps are documented in [security guidance](SECURITY.md) and the [roadmap](docs/roadmap.md). Keep the demonstration local and use synthetic data only.
+
+## Documentation and contribution
+
+Start with the [documentation index](docs/README.md), [architecture](DESIGN.md), or [engineering approach](docs/ai-assisted-engineering.md). The [journal](docs/development-journal.md) preserves chronological steps, failed attempts, corrections and evidence; [documentation changes](docs/documentation-changelog.md) and [original snapshots](docs/history/README.md) provide supporting history. Historical claims describe their recorded stage, not necessarily the current system.
+
+Propose focused changes through a pull request, explain the problem and scope, and include actual verification results. Human review is required before accepting AI-assisted work. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), rather than in public issues or pull requests.
+
+Project-authored material is available under the [MIT licence](LICENSE); [third-party notices](THIRD_PARTY_NOTICES.md) retain upstream attribution. Never commit real participant information, access tokens, private keys or confidential material.

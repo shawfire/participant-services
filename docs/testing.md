@@ -252,3 +252,31 @@ On 28 October 2026, GitHub Actions [run 40651138381](https://github.com/shawfire
 The local issuer now signs `participant_id=P001`. Rebuilt Compose passed validation/startup with existing certificates, and the exact updated smoke block passed twelve cases: own reads 200, six invalid/missing-token rejections in total, and P002/P999 forbidden responses on both routes with null participant data. Loaded the same images into kind, restarted/waited for all three Deployments, updated the smoke-client ConfigMap and ran a fresh disposable Job; all twelve cases passed there too. Tokens/keys were not displayed. Generic GraphQL denials use HTTP 200 plus `errors[].extensions.code=FORBIDDEN`; they are not HTTP 401 authentication failures.
 
 [Authorisation](authorisation.md) owns the policy and claim-provisioning contract. The implementation was committed after these local checks; review and current hosted check status are tracked in [PR #1](https://github.com/shawfire/participant-services/pull/1). Staff/delegate rules, entitlement revocation/provisioning, production identity assurance and the existing issuer health-probe TLS bypass remain outside this implementation. No AWS resources changed.
+
+## Publication preparation — 30 October 2026
+
+| Check | Observed outcome |
+|---|---|
+| Gitleaks v8.24.3, all locally reachable refs after fetch | Initial default scan of 23 commits exited 1 with two `generic-api-key` candidates in historical GraphQL policy prose. Manual review confirmed explanatory text, not credentials. |
+| Full-history rescan with exact reviewed exceptions | Exit 0, no remaining findings. `.gitleaksignore` names only those two commit/file/rule/line fingerprints; no baseline, broad path/rule exclusions or history rewrite was used. |
+| Proposed publication-file scan | Initial scan flagged the same prose in the current reference; rephrased that current sentence only. Final directory scan of tracked plus non-ignored proposed files exited 0. Ignored certificates/keys, backup and `.git` were excluded from the candidate copy. |
+| Go tests/vet | Fresh `go test -count=1 -race ./...` and `go vet ./...` passed. |
+| Static/local configuration checks | Formatting, merged Compose config, Kustomize render, actionlint v1.7.7 (optional ShellCheck disabled), policy JSON and documented Bash syntax passed. |
+| Documentation | The first draft changed the README quick-start heading and broke three links, including a historical journal link. Restored the existing heading/anchor; all current links and collapsed sections then passed. Checker now includes every root Markdown file, including security and third-party notices. |
+| Publication exclusion checks | Local keys/certificates are ignored and untracked. The Compose backup is unchanged, untracked and now explicitly ignored. No staging, commit, push or visibility change occurred. |
+| Private reporting API | Read returned HTTP 404 while repository is private; active reporting is not verified. GitHub documents this feature for public repositories. Enable and check it during a separately approved visibility transition, before announcement. |
+
+The owner confirmed retaining historical interview/briefing references and personal metadata, authority to license project-authored material under MIT, and `shawfire` as copyright holder. Generated-code attribution/upstream gqlgen MIT notice is retained separately; Go dependencies and base images keep their original licences. No conflicting vendored source was identified; this is not a comprehensive legal/dependency or vulnerability certification.
+
+For a future repeat, install the scanner outside the project and keep output redacted:
+
+```bash
+mkdir -p /tmp/participant-publication-tools
+GOBIN=/tmp/participant-publication-tools go install github.com/zricethezav/gitleaks/v8@v8.24.3
+/tmp/participant-publication-tools/gitleaks git --redact=100 --no-banner \
+  --ignore-gitleaks-allow --log-opts=--all .
+```
+
+Use no unexpected `GITLEAKS_CONFIG` environment override or baseline; inspect every new candidate privately rather than broadly suppressing rules. New branches, uncommitted files and future changes require their own review. The directory scan in this phase used a temporary copy of proposed public files, not the ignored runtime key directory. Reports remained outside the repository; no secret values were printed.
+
+**Not performed in this phase:** complete clean-checkout onboarding, new live Docker/kind authentication runs, hosted CI for the unpublished preparation edits, dependency/image-vulnerability scanning, AWS checks or private-reporting enablement. Previous runtime/hosted results remain dated evidence above. Application source, authentication/security behaviour, Docker/Compose manifests and dependency files are unchanged.

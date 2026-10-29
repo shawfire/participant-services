@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Authentication](authentication.md) · [Testing](testing.md)
 
-**Implemented and verified locally on the review branch — 29 October 2026:** participant self-access in the shared service. Go race tests/vet, Docker and the in-cluster Kubernetes smoke Job passed; implementation commit `e5c748f` is prepared for review; hosted CI results belong to the pull request. Authentication and authorisation are separate: verified identity alone does not grant arbitrary participant access. Staff/delegate access, dynamic entitlements and production identity provisioning remain unimplemented.
+**Merged via [PR #1](https://github.com/shawfire/participant-services/pull/1) on 29 October 2026:** participant self-access in the shared service. Go race tests/vet, Docker and the in-cluster Kubernetes smoke Job passed; implementation commit `e5c748f` is included in merge `c97d9b8`, whose [hosted CI](https://github.com/shawfire/participant-services/actions/runs/40831913830) passed. Authentication and authorisation are separate: verified identity alone does not grant arbitrary participant access. Staff/delegate access, dynamic entitlements and production identity provisioning remain unimplemented.
 
 <details>
 <summary>Policy and trusted mapping</summary>
