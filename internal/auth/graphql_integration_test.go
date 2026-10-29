@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
 	"github.com/shawfire/participant-services/internal/health"
 	"github.com/shawfire/participant-services/internal/integration/mulesoft"
+	"github.com/shawfire/participant-services/internal/mockmulesoft"
 	"github.com/shawfire/participant-services/internal/participant"
 )
 
@@ -92,12 +95,14 @@ func TestGraphQLJWTIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// __typename does not invoke participant resolvers or MuleSoft.
-	// Supply a non-nil repository to satisfy the service constructor.
-	mulesoftClient := mulesoft.NewClient(
-		"http://127.0.0.1:1",
-		2*time.Second,
-	)
+	var upstreamCalls atomic.Int64
+	mock := mockmulesoft.NewHandler()
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upstreamCalls.Add(1)
+		mock.ServeHTTP(w, r)
+	}))
+	defer upstream.Close()
+	mulesoftClient := mulesoft.NewClient(upstream.URL, 2*time.Second)
 
 	participantService := participant.NewServiceWithRepository(
 		mulesoftClient,
@@ -137,7 +142,7 @@ func TestGraphQLJWTIntegration(t *testing.T) {
 	api := httptest.NewServer(mux)
 	defer api.Close()
 
-	signToken := func(claims jwt.RegisteredClaims) string {
+	signToken := func(claims jwt.Claims) string {
 		t.Helper()
 
 		token := jwt.NewWithClaims(
@@ -229,6 +234,85 @@ func TestGraphQLJWTIntegration(t *testing.T) {
 				})
 			}
 		})
+	}
+
+	// Participant queries traverse verified JWT -> shared policy -> HTTP repository.
+	own := Claims{RegisteredClaims: jwt.RegisteredClaims{Issuer: issuer, Subject: "participant-123", Audience: jwt.ClaimStrings{audience}, ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour))}, ParticipantID: "P001"}
+	ownToken := signToken(own)
+	second := own
+	second.ParticipantID = "P002"
+	secondToken := signToken(second)
+	// Change the mapping without resigning: even a syntactically valid JWT must fail authentication.
+	parts := strings.Split(ownToken, ".")
+	forged := own
+	forged.ParticipantID = "P002"
+	payload, _ := json.Marshal(forged)
+	forgedToken := parts[0] + "." + base64.RawURLEncoding.EncodeToString(payload) + "." + parts[2]
+	for _, endpoint := range []struct{ path, query, field, idField string }{
+		{"/graphql/portal", `{ participant(id: "%s") { id firstName lastName } }`, "participant", "id"},
+		{"/graphql/mobile", `{ profile(participantId: "%s") { participantId displayName } }`, "profile", "participantId"},
+	} {
+		for _, tc := range []struct {
+			name, id, token         string
+			denied, unauthenticated bool
+		}{
+			{name: "own participant", id: "P001", token: ownToken},
+			{name: "second participant own record", id: "P002", token: secondToken},
+			{name: "other participant", id: "P002", token: ownToken, denied: true},
+			{name: "unknown other participant", id: "P999", token: ownToken, denied: true},
+			{name: "missing mapping", id: "P001", token: validToken, denied: true},
+			{name: "forged mapping", id: "P002", token: forgedToken, unauthenticated: true},
+		} {
+			t.Run(endpoint.path+"/"+tc.name, func(t *testing.T) {
+				query := strings.Replace(endpoint.query, "%s", tc.id, 1)
+				body, _ := json.Marshal(map[string]string{"query": query})
+				req, err := http.NewRequest(http.MethodPost, api.URL+endpoint.path, bytes.NewReader(body))
+				if err != nil {
+					t.Fatal(err)
+				}
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Authorization", "Bearer "+tc.token)
+				// Caller-controlled identity hints must never override the verified mapping.
+				req.Header.Set("X-Participant-ID", tc.id)
+				before := upstreamCalls.Load()
+				response, err := api.Client().Do(req)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer response.Body.Close()
+				if tc.unauthenticated {
+					if response.StatusCode != 401 || upstreamCalls.Load() != before {
+						t.Fatal("forged mapping was not rejected before upstream")
+					}
+					return
+				}
+				if response.StatusCode != 200 {
+					t.Fatalf("status=%d", response.StatusCode)
+				}
+				var result struct {
+					Data   map[string]map[string]any `json:"data"`
+					Errors []struct {
+						Message    string         `json:"message"`
+						Extensions map[string]any `json:"extensions"`
+					} `json:"errors"`
+				}
+				if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+					t.Fatal(err)
+				}
+				if tc.denied {
+					if len(result.Errors) != 1 || result.Errors[0].Message != "forbidden" || result.Errors[0].Extensions["code"] != "FORBIDDEN" || result.Data[endpoint.field] != nil {
+						t.Fatalf("expected generic forbidden result: %+v", result)
+					}
+					if upstreamCalls.Load() != before {
+						t.Fatal("denied request reached MuleSoft")
+					}
+				} else {
+					if len(result.Errors) != 0 || result.Data[endpoint.field][endpoint.idField] != tc.id || upstreamCalls.Load() != before+1 {
+						t.Fatalf("own query failed: %+v", result)
+					}
+				}
+			})
+		}
 	}
 
 	for _, path := range []string{"/healthz", "/readyz"} {

@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Development journal](development-journal.md)
 
-**Committed and pushed as `9a81351` — 28 October 2026:** API, local HTTPS issuer and mock MuleSoft images. At handover all three services were healthy, but Go JWT/JWKS authentication was still awaiting successful verification. The approved repeat verification subsequently passed against rebuilt images, including a fresh API JWKS cache. See [testing](testing.md#docker-authentication-evidence) for evidence and limits.
+**Committed and pushed as `9a81351` — 28 October 2026:** API, local HTTPS issuer and mock MuleSoft images. At handover all three services were healthy, but Go JWT/JWKS authentication was still awaiting successful verification. The approved repeat verification subsequently passed against rebuilt images, including a fresh API JWKS cache. See [testing](testing.md#docker-authentication-evidence) for evidence and limits. The 29 October working-tree self-access change was also verified on the rebuilt local stack; use fresh tokens containing the signed mapping.
 
 ## First-time local setup
 
@@ -194,7 +194,7 @@ The local overlay mounts the bundle read-only into the API at `/certs/ca-bundle.
 
 All three services use read-only root filesystems, dropped capabilities and no-new-privileges. Issuer certificate and private key mounts are read-only. `.dockerignore` excludes `config/`, backup files, private-key patterns and `.env` patterns. Runtime configuration and local certificate material stay outside the build context; read-only bind mounts still supply certificates at runtime. No secrets are reproduced here.
 
-The issuer is a local test fixture with an unauthenticated token endpoint; it must not become a production identity service. Participant-level authorisation is absent. API health/readiness routes remain public.
+The issuer is a local test fixture with an unauthenticated token endpoint; it must not become a production identity service. [Self-access](authorisation.md) is enforced by the rebuilt API; staff/delegate authorisation remains absent. API health/readiness routes remain public.
 
 </details>
 

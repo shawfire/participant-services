@@ -3,6 +3,7 @@ package participant
 import (
 	"context"
 	"errors"
+	"github.com/shawfire/participant-services/internal/identity"
 	"testing"
 )
 
@@ -31,7 +32,7 @@ func TestServiceWithRepository(t *testing.T) {
 
 	service := NewServiceWithRepository(repo)
 
-	p, err := service.Get(context.Background(), "P003")
+	p, err := service.Get(identity.WithPrincipal(context.Background(), identity.Principal{Subject: "test-subject", ParticipantID: "P003"}), "P003")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -52,7 +53,7 @@ func TestServiceWithRepositoryNotFound(t *testing.T) {
 
 	service := NewServiceWithRepository(repo)
 
-	_, err := service.Get(context.Background(), "P999")
+	_, err := service.Get(identity.WithPrincipal(context.Background(), identity.Principal{Subject: "test-subject", ParticipantID: "P999"}), "P999")
 
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)

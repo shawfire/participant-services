@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/shawfire/participant-services/internal/identity"
 )
 
 // TokenVerifier verifies a JWT and returns its validated claims.
@@ -53,6 +55,10 @@ func RequireJWT(
 			claims,
 		)
 
+		ctx = identity.WithPrincipal(ctx, identity.Principal{
+			Subject:       claims.Subject,
+			ParticipantID: claims.ParticipantID,
+		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

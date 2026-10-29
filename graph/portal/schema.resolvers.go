@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 
+	"github.com/vektah/gqlparser/v2/gqlerror"
+
 	"github.com/shawfire/participant-services/graph/portal/generated"
 	"github.com/shawfire/participant-services/graph/portal/model"
 	"github.com/shawfire/participant-services/internal/participant"
@@ -14,6 +16,13 @@ func (r *queryResolver) Participant(
 	id string,
 ) (*model.Participant, error) {
 	p, err := r.Participants.Get(ctx, id)
+	if errors.Is(err, participant.ErrForbidden) {
+		return nil, &gqlerror.Error{
+			Message:    "forbidden",
+			Extensions: map[string]any{"code": "FORBIDDEN"},
+		}
+	}
+
 	if errors.Is(err, participant.ErrNotFound) {
 		return nil, nil
 	}

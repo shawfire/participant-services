@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/shawfire/participant-services/internal/auth"
 )
 
 const (
@@ -63,12 +64,15 @@ func main() {
 
 		token := jwt.NewWithClaims(
 			jwt.SigningMethodRS256,
-			jwt.RegisteredClaims{
-				Issuer:    issuer,
-				Subject:   "participant-123",
-				Audience:  jwt.ClaimStrings{audience},
-				IssuedAt:  jwt.NewNumericDate(now),
-				ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
+			auth.Claims{
+				ParticipantID: "P001",
+				RegisteredClaims: jwt.RegisteredClaims{
+					Issuer:    issuer,
+					Subject:   "participant-123",
+					Audience:  jwt.ClaimStrings{audience},
+					IssuedAt:  jwt.NewNumericDate(now),
+					ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
+				},
 			},
 		)
 		token.Header["kid"] = keyID

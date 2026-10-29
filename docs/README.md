@@ -7,6 +7,7 @@
 | Document | Authoritative scope |
 |---|---|
 | [Authentication](authentication.md) | JWT configuration, verification, JWKS caching and security boundaries |
+| [Participant authorisation](authorisation.md) | Self-access policy, trusted mapping, error behaviour and remaining scope |
 | [GraphQL](graphql.md) | Consumer contracts, queries, generation and resolver behaviour |
 | [Integration](integration.md) | Repository adapter, mock MuleSoft, failure mapping and retries |
 | [Observability](observability.md) | JSON logs, request IDs and propagation |

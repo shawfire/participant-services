@@ -17,6 +17,7 @@ import (
 	"github.com/shawfire/participant-services/graph/portal"
 	portalgenerated "github.com/shawfire/participant-services/graph/portal/generated"
 
+	"github.com/shawfire/participant-services/internal/identity"
 	"github.com/shawfire/participant-services/internal/integration/mulesoft"
 	"github.com/shawfire/participant-services/internal/mockmulesoft"
 	"github.com/shawfire/participant-services/internal/participant"
@@ -54,8 +55,13 @@ func TestGraphQLEndToEnd(t *testing.T) {
 	mobileAPI.AddTransport(transport.POST{})
 
 	mux := http.NewServeMux()
-	mux.Handle("POST /graphql/portal", portalAPI)
-	mux.Handle("POST /graphql/mobile", mobileAPI)
+	withIdentity := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(identity.WithPrincipal(r.Context(), identity.Principal{Subject: "fixture", ParticipantID: "P001"})))
+		})
+	}
+	mux.Handle("POST /graphql/portal", withIdentity(portalAPI))
+	mux.Handle("POST /graphql/mobile", withIdentity(mobileAPI))
 
 	api := httptest.NewServer(mux)
 	defer api.Close()

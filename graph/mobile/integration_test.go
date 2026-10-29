@@ -2,6 +2,7 @@ package mobile_test
 
 import (
 	"encoding/json"
+	"github.com/shawfire/participant-services/internal/identity"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,6 +33,7 @@ func TestMobileProfileQuery(t *testing.T) {
 		"/graphql/mobile",
 		strings.NewReader(body),
 	)
+	req = req.WithContext(identity.WithPrincipal(req.Context(), identity.Principal{Subject: "test-subject", ParticipantID: "P001"}))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec := httptest.NewRecorder()

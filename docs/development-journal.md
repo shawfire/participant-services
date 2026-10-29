@@ -1142,3 +1142,42 @@ Added the [documentation change log](documentation-changelog.md) with stable chr
 **Remaining scope:** no hosted runtime-stack test, AWS IAM/EKS deployment, image publication or participant-level authorisation is claimed. Existing Compose/kind services and local certificates are unchanged. The only intentionally untracked artefact after the follow-up is the user's preserved Compose backup. Next development should address remaining explicitly documented gaps or a reviewed cloud exercise, not treat passing CI as production readiness.
 
 </details>
+
+<details>
+<summary>Shared participant self-access authorisation — 29 October 2026</summary>
+
+**Objective and initial state:** the user approved continuing the suggested self-access stage and requested ongoing explanations and maintained Markdown documentation. Initial Git state contained only the user's untracked Compose backup. Authentication and hosted CI were previously verified, but service `Get` accepted any participant ID and the local issuer subject `participant-123` did not match domain IDs such as P001. No commits or pushes were requested for this new stage.
+
+**Decision and rationale:** choose participant self-access only, with an explicit trusted signed `participant_id` claim rather than treating `sub` as a record ID or accepting a caller-supplied header. The issuer owns that mapping. Add a small internal identity-context package with value-copy principals; JWT middleware creates it only after existing cryptographic/registered-claim verification. The participant service depends on identity, not the JWT/HTTP implementation, so both consumers share the policy.
+
+**Implementation:** JWT claims now include optional `participant_id`; the local fixture signs P001 for its fixed subject. Shared `Service.Get` checks nonempty subject/mapping and exact requested-ID equality before memory lookup or repository access. Missing identity/mapping and cross-participant IDs return `ErrForbidden`. A repository response containing another ID is rejected too. Portal/Mobile translate denial to a null participant field and generic `forbidden`/`FORBIDDEN` GraphQL error without exposing target existence. Invalid JWTs still produce HTTP 401 before GraphQL; valid-but-forbidden GraphQL fields use HTTP 200 with errors. Cancellation and authorised not-found behaviour are retained. There is no service bypass constructor or production test-mode switch.
+
+**Tests and observed results:** focused race tests passed, then the full `go test -count=1 -race ./...` suite and `go vet ./...` passed. Existing direct service/handler fixtures now provide explicit trusted context. Service tests cover absent/empty identity, missing mapping, cross/unknown/empty IDs and no repository calls on denial, plus wrong-record upstream responses. The JWT HTTP integration fixture now uses real mock MuleSoft participant queries in addition to existing authentication cases: P001 and P002 mappings can read their own records; cross-participant, unknown-other and missing-mapping requests return generic denials without upstream access. A tampered mapping without re-signing is rejected as unauthenticated; identity headers do not override signed claims. No implementation/test failure was encountered in this stage.
+
+**Working demonstrations:** rebuilt the local Compose stack without replacing certificate files, obtained a fresh token in memory over CA/hostname-validated HTTPS, and ran the updated documented smoke client. Both own-P001 queries returned exact expected data; missing/malformed/tampered tokens returned 401; valid P001 requests for P002/P999 returned `FORBIDDEN` and no data on both routes, despite a spoofed `X-Participant-ID`. All twelve cases passed. Loaded the rebuilt API/issuer/mock images into the existing isolated kind cluster, restarted/waited for all three Deployments, refreshed the smoke-client ConfigMap and ran a new disposable authentication Job; all twelve cases passed again. Tokens/private keys were not printed. Local stacks remain running with this working-tree change; old tokens without a mapping must be replaced before reading participants.
+
+**Documentation:** added the focused authorisation reference; updated current authentication/GraphQL/architecture/README/navigation and remaining-work statements. Extended the single copy-and-run test client in testing rather than duplicating another helper. Updated Docker/Kubernetes evidence and kept older absent-authorisation statements in this journal and historical snapshots untouched. Current Markdown links/anchors, collapsed sections, shell examples, original historical blocks/snapshots and previous journal/change-log prefixes passed checks; `git diff --check` passed. See DOC-014 in the [documentation change log](documentation-changelog.md).
+
+**Risks and next steps:** issuer provisioning accuracy is a trust assumption; there is no dynamic entitlement/revocation service, staff/delegate/multiple-participant/field-level policy or production identity assurance. The local issuer remains unauthenticated and reuses its TLS key for signing. Its existing health-probe TLS bypass is unchanged; the Go API/client continue full TLS/signature validation. No new dependencies or AWS resources were introduced. The prior hosted CI results describe earlier commits; this implementation is uncommitted and locally verified only. Review before a separate implementation/documentation commit; do not push without approval. The user's Compose backup remains intact.
+
+</details>
+
+<details>
+<summary>Participant self-access pull request preparation — 29 October 2026</summary>
+
+**Authorisation and scope:** the user requested all pending implementation/documentation changes in a pull request for review. Refreshed `origin/main` and confirmed it matched local HEAD, then created `feat/participant-self-access`. Preserved the user's untracked Compose backup outside the review changes.
+
+**Verification and commits:** repeated the full `go test -count=1 -race ./...` suite and `go vet ./...`; both passed. Current Markdown checks and `git diff --check` passed. Committed implementation/tests as `e5c748f` (`Enforce shared participant self-access from verified JWT mapping`). Documentation follows separately with the complete policy reference, extended test commands, current status and append-only audit. Earlier uncommitted-state entries remain historical observations.
+
+**Review focus:** explicit signed mapping rather than subject-as-ID; shared enforcement before repository access; generic GraphQL denial; missing-mapping/old-token compatibility; no staff/delegate policy or production entitlement lifecycle. Prior Docker and Kubernetes twelve-case results remain the runtime evidence. Push only the review branch, open against `main`, and do not merge. Hosted checks are to be inspected after publication. See DOC-015 in the [documentation change log](documentation-changelog.md).
+
+</details>
+
+<details>
+<summary>Participant self-access PR opened — 29 October 2026</summary>
+
+**Publication:** pushed `feat/participant-self-access` with implementation commit `e5c748f` and documentation commit `c90e782`. Opened [PR #1 — Enforce participant self-access across Portal and Mobile](https://github.com/shawfire/participant-services/pull/1) against `main`. Verified the PR is open and includes all 29 intended implementation/test/documentation files, with no certificate/key material or local Compose backup. The PR description records expected behaviour, compatibility, actual test evidence and remaining policy limitations. No merge was performed.
+
+**Initial hosted observation:** PR run 40830611089 had passed Go race tests/vet and documentation/configuration checks; image builds were still running when this entry was recorded. Current hosted status belongs to the PR checks, not an inferred result. Added the PR reference to current testing evidence and this append-only audit; local Markdown/diff checks passed before the follow-up commit. See DOC-016 in the [documentation change log](documentation-changelog.md).
+
+</details>

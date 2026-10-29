@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Architecture](../DESIGN.md)
 
-**Implemented and committed as `4a4bec9`.** It was uncommitted at the initial documentation inspection. Participant-level authorisation remains unimplemented.
+**Implemented and committed as `4a4bec9`.** It was uncommitted at the initial documentation inspection. [Participant self-access](authorisation.md) is implemented in the working tree; staff/delegate access remains unimplemented.
 
 <details>
 <summary>Configuration and local use</summary>
@@ -46,7 +46,7 @@ A genuinely unknown key ID may trigger an early refresh, limited to one attempt 
 <details>
 <summary>Security boundary and remaining work</summary>
 
-A valid token identifies the caller but does not restrict which participant ID they can query. Shared-service ownership/scope policy and negative cross-participant tests remain required. GraphQL depth/complexity limits, production identity-provider operations, metrics and audit policy are future work.
+A valid token identifies the caller. Participant reads also require the trusted signed `participant_id` claim under the [self-access policy](authorisation.md). Missing mapping and cross-participant requests are denied by the shared service; broad scopes/staff/delegate rules remain future work. GraphQL depth/complexity limits, production identity-provider operations, metrics and audit policy are future work.
 
 Never log tokens, private keys or participant personal information. Use synthetic records and keep this prototype local. Deployment planning is recorded in the [roadmap](roadmap.md).
 
@@ -57,12 +57,12 @@ Verification coverage and its limits are authoritative in [testing](testing.md).
 <details>
 <summary>Local HTTPS issuer — implemented fixture, limited assurance</summary>
 
-[cmd/localissuer/main.go](../cmd/localissuer/main.go) loads an RSA TLS private key and uses the same key to sign development JWTs. `POST /dev/token` issues RS256 tokens with `kid=local-dev-key`, subject `participant-123`, audience `participant-services`, issuer `https://local-issuer:8443` and a 15-minute expiry. `GET /.well-known/jwks.json` publishes the matching RSA public key.
+[cmd/localissuer/main.go](../cmd/localissuer/main.go) loads an RSA TLS private key and uses the same key to sign development JWTs. `POST /dev/token` issues RS256 tokens with `kid=local-dev-key`, subject `participant-123`, signed `participant_id=P001`, audience `participant-services`, issuer `https://local-issuer:8443` and a 15-minute expiry. `GET /.well-known/jwks.json` publishes the matching RSA public key.
 
-Using one key for TLS and signing and exposing an unauthenticated token endpoint are local-fixture shortcuts, not production identity design. No scopes or participant-ownership policy are enforced. A token subject is not proof of entitlement to P001.
+Using one key for TLS and signing and exposing an unauthenticated token endpoint are local-fixture shortcuts, not production identity design. The shared service uses the signed mapping for self-access. Staff/delegate scopes are not implemented; subject alone is not proof of entitlement to P001.
 
 The [first-time setup](containers.md#first-time-local-setup) owns CA/key/certificate creation, safe reuse, renewal, configuration, DNS alias, mounts and health-check details. Go's HTTPS client must validate certificate trust, validity and the configured hostname before the JWKS can be accepted. Successful BusyBox diagnostics, a mounted bundle or a healthy issuer alone are insufficient.
 
-At handover, successful end-to-end JWT validation remained pending. A subsequent session check observed valid participant results and invalid-token rejection before the user requested documentation-first approval; see [testing evidence](testing.md#docker-authentication-evidence). The approved repeat verification now passed against rebuilt images and a recreated API with an empty JWKS cache. This confirms the Go/API trust and JWT path for the current local setup, while preserving the historical handover uncertainty. It does not verify production identity operations or resource authorisation.
+At handover, successful end-to-end JWT validation remained pending. A subsequent session check observed valid participant results and invalid-token rejection before the user requested documentation-first approval; see [testing evidence](testing.md#docker-authentication-evidence). The approved repeat verification now passed against rebuilt images and a recreated API with an empty JWKS cache. This confirms the Go/API trust and JWT path for the current local setup, while preserving the historical handover uncertainty. Those 28 October checks did not verify resource authorisation; current self-access results are recorded separately in testing. Production identity operations remain unverified.
 
 </details>

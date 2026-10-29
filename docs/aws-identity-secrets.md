@@ -16,7 +16,7 @@
 | API secrets | No upstream password, API key or database credential is consumed | Add a consumer and lifecycle tests before wiring managed secrets |
 | Local issuer key | Ignored host file, injected through a Kubernetes Secret | Replace local fixture with a managed/trusted provider; do not promote its development signing key |
 
-A Kubernetes service account does not grant AWS access. End-user JWT validation does not grant Kubernetes or IAM permissions. Participant-level authorisation remains missing: a valid end-user token still does not prove entitlement to the requested participant ID.
+A Kubernetes service account does not grant AWS access. End-user JWT validation does not grant Kubernetes or IAM permissions. [Self-access](authorisation.md) now additionally checks the issuer-managed participant mapping. Staff/delegate entitlement remains unimplemented.
 
 The API does not need permission to read its local issuer's private key. Kubernetes mounts that Secret into the issuer Pod; the API verifies public JWKS keys. Reading a mounted file does not require application `get secrets` RBAC permission. Named service accounts and disabled token mounts do not provide network isolation.
 

@@ -71,6 +71,6 @@ The initial workflow was committed and pushed with explicit user authorisation; 
 
 Offline rendering is not Kubernetes API validation, JSON parsing is not IAM permission validation, and a successful image build is not a runtime authentication test. The local [Compose](containers.md) and [Kubernetes](kubernetes.md) authentication exercises remain separate. Hosted CI does not yet run those stacks, scan images/dependencies, check schema compatibility or produce release artifacts. The first hosted Ubuntu/AMD64 run and all image builds passed; this does not establish multi-platform runtime behaviour.
 
-No CD is implemented. A future publishing/deployment workflow needs reviewed OIDC trust, exact ECR/EKS permissions, environment approval, immutable image promotion and rollback procedures. Participant-level authorisation remains missing, so a passing pipeline does not authorise public exposure.
+No CD is implemented. A future publishing/deployment workflow needs reviewed OIDC trust, exact ECR/EKS permissions, environment approval, immutable image promotion and rollback procedures. Self-access is implemented, but broader authorisation and production controls remain incomplete; a passing pipeline does not authorise public exposure.
 
 </details>

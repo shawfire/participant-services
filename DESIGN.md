@@ -2,7 +2,7 @@
 
 [Documentation index](docs/README.md) · [Development journal](docs/development-journal.md)
 
-**As built — 28 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). A [local Kubernetes demonstration](docs/kubernetes.md) now packages the same three services with internal Services, configuration and certificate mounts. The [AWS identity/secrets design](docs/aws-identity-secrets.md) separates end-user authentication from workload permissions; no cloud deployment is claimed.
+**As built — 29 October 2026:** local synthetic middleware prototype, including JWT authentication committed as `4a4bec9`. Verification evidence is recorded in [testing](docs/testing.md). A [local Kubernetes demonstration](docs/kubernetes.md) now packages the same three services with internal Services, configuration and certificate mounts. The [AWS identity/secrets design](docs/aws-identity-secrets.md) separates end-user authentication from workload permissions; no cloud deployment is claimed.
 
 ```mermaid
 flowchart TD
@@ -25,7 +25,7 @@ Request ID and access-log middleware wrap the router. Health probes remain publi
 
 HTTP requests receive a correlation ID and access logging. Portal and Mobile POST routes validate a Bearer JWT before invoking their separate gqlgen schemas. Validated claims enter the request context. Resolvers pass that context to the shared service and repository adapter; the HTTP client propagates cancellation and request correlation to mock MuleSoft. Consumer models remain distinct from domain and integration models.
 
-Authentication establishes identity. The service does not yet check whether that identity may access the requested participant ID. Query complexity limits, batching, persistence, submissions and idempotency are future work.
+Authentication establishes identity; the shared service now enforces [self-access](docs/authorisation.md) using a verified issuer-managed participant mapping before repository access. Query complexity limits, batching, persistence, submissions and idempotency are future work.
 
 Detailed behaviour belongs in [authentication](docs/authentication.md), [GraphQL](docs/graphql.md), [integration](docs/integration.md), [observability](docs/observability.md), and [health/lifecycle](docs/health-lifecycle.md).
 
@@ -35,7 +35,7 @@ Detailed behaviour belongs in [authentication](docs/authentication.md), [GraphQL
 <summary>Architecture decisions and trade-offs</summary>
 
 - **ADR-001 — implemented:** separate Portal and Mobile gqlgen schemas and models share domain services. This supports distinct consumer needs and least data exposure, at the cost of two generation configurations and duplicated API wiring. Independent schema evolution remains to be tested.
-- **ADR-002 — proposed:** enforce resource authorisation in shared services, with explicit trusted identity context, to prevent inconsistent rules across channels.
+- **ADR-002 — implemented for self-access:** enforce participant identity matching in shared services using trusted context, so both channels use the same rule. Staff/delegate policies remain proposed.
 - **ADR-003 — partially implemented:** isolate enterprise integration behind a repository adapter. The adapter exists; persistent submission identity, idempotency and reconciliation are proposed. They add state-management complexity but enable safe mutation retries.
 - **ADR-004 — proposed deployment approach:** validate local behaviour and Docker/Kubernetes before EKS, subject to time and cost. See the [roadmap](docs/roadmap.md).
 

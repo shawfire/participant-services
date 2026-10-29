@@ -10,6 +10,7 @@ import (
 // Claims represents identity claims in a JWT.
 type Claims struct {
 	jwt.RegisteredClaims
+	ParticipantID string `json:"participant_id,omitempty"`
 }
 
 // Verifier validates JWTs signed by a trusted RSA private key.

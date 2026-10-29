@@ -4,9 +4,14 @@ import (
 	"context"
 	"errors"
 	"sync"
+
+	"github.com/shawfire/participant-services/internal/identity"
 )
 
 var ErrNotFound = errors.New("participant not found")
+
+// ErrForbidden denies access without revealing whether the requested record exists.
+var ErrForbidden = errors.New("participant access forbidden")
 
 type Participant struct {
 	ID        string
@@ -56,8 +61,21 @@ func (s *Service) Get(
 		return Participant{}, err
 	}
 
+	principal, ok := identity.FromContext(ctx)
+	if !ok || principal.Subject == "" || principal.ParticipantID == "" || principal.ParticipantID != id {
+		return Participant{}, ErrForbidden
+	}
+
 	if s.repository != nil {
-		return s.repository.GetParticipant(ctx, id)
+		p, err := s.repository.GetParticipant(ctx, id)
+		if err != nil {
+			return Participant{}, err
+		}
+		// Do not expose a different record if an upstream violates its lookup contract.
+		if p.ID != id {
+			return Participant{}, ErrForbidden
+		}
+		return p, nil
 	}
 
 	s.mu.RLock()
