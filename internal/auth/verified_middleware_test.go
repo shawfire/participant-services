@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/shawfire/participant-services/internal/identity"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,7 +39,7 @@ func TestRequireJWT(t *testing.T) {
 		{
 			name:       "valid JWT",
 			headers:    []string{"Bearer valid-token"},
-			claims:     &Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "participant-123"}},
+			claims:     &Claims{RegisteredClaims: jwt.RegisteredClaims{Subject: "participant-123"}, ParticipantID: "P001"},
 			wantStatus: http.StatusOK,
 			wantCalls:  1,
 		},
@@ -96,6 +97,10 @@ func TestRequireJWT(t *testing.T) {
 					t.Error("verified claims missing from request context")
 				}
 
+				principal, trusted := identity.FromContext(r.Context())
+				if !trusted || principal.Subject != "participant-123" || principal.ParticipantID != "P001" {
+					t.Error("trusted principal missing")
+				}
 				w.WriteHeader(http.StatusOK)
 			})
 

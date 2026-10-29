@@ -1,6 +1,7 @@
 package portal_test
 
 import (
+	"github.com/shawfire/participant-services/internal/identity"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,6 +33,7 @@ func TestPortalParticipantQuery(t *testing.T) {
 		"/graphql/portal",
 		strings.NewReader(body),
 	)
+	request = request.WithContext(identity.WithPrincipal(request.Context(), identity.Principal{Subject: "test-subject", ParticipantID: "P001"}))
 	request.Header.Set("Content-Type", "application/json")
 
 	response := httptest.NewRecorder()

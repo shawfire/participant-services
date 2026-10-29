@@ -3,13 +3,14 @@ package participant
 import (
 	"context"
 	"errors"
+	"github.com/shawfire/participant-services/internal/identity"
 	"testing"
 )
 
 func TestGetParticipant(t *testing.T) {
 	service := NewService()
 
-	p, err := service.Get(context.Background(), "P001")
+	p, err := service.Get(identity.WithPrincipal(context.Background(), identity.Principal{Subject: "test-subject", ParticipantID: "P001"}), "P001")
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
@@ -22,7 +23,7 @@ func TestGetParticipant(t *testing.T) {
 func TestGetParticipantNotFound(t *testing.T) {
 	service := NewService()
 
-	_, err := service.Get(context.Background(), "UNKNOWN")
+	_, err := service.Get(identity.WithPrincipal(context.Background(), identity.Principal{Subject: "test-subject", ParticipantID: "UNKNOWN"}), "UNKNOWN")
 
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
@@ -50,7 +51,7 @@ func TestConcurrentParticipantReads(t *testing.T) {
 
 	for i := 0; i < workers; i++ {
 		go func() {
-			p, err := service.Get(context.Background(), "P001")
+			p, err := service.Get(identity.WithPrincipal(context.Background(), identity.Principal{Subject: "test-subject", ParticipantID: "P001"}), "P001")
 			if err == nil && p.ID != "P001" {
 				err = errors.New("unexpected participant ID")
 			}
