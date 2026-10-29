@@ -2,7 +2,7 @@
 
 [Documentation index](README.md) · [Containers and certificates](containers.md) · [Development journal](development-journal.md)
 
-This local kind exercise demonstrates Kubernetes concepts relevant to EKS. It does not provision AWS. Use synthetic data only: participant-level authorisation is still missing. **Verified locally — 28 October 2026:** kind v0.33.0 / Kubernetes v1.37.0, all three rollouts, in-cluster TLS/JWT participant checks and localhost probes passed. See [testing](testing.md#kubernetes-verification) and the journal for evidence and limits.
+This local kind exercise demonstrates Kubernetes concepts relevant to EKS. It does not provision AWS. Use synthetic data only: [self-access](authorisation.md) is implemented in the working tree; staff/delegate access remains missing. **Verified locally — 28 October 2026:** kind v0.33.0 / Kubernetes v1.37.0, all three rollouts, in-cluster TLS/JWT participant checks and localhost probes passed. See [testing](testing.md#kubernetes-verification) and the journal for evidence and limits. The extended self-access Job also passed twelve cases on 29 October after reloading/restarting the working-tree images.
 
 <details>
 <summary>1. Prerequisites and isolated cluster</summary>
@@ -110,7 +110,7 @@ kubectl -n participant-services wait --for=condition=complete job/auth-smoke --t
 kubectl -n participant-services logs job/auth-smoke
 ```
 
-Expected: valid RS256 participant queries return 200 with matching Portal/Mobile P001 data; tampered, malformed and missing tokens return 401 on each endpoint. The helper verifies issuer CA/hostname and compares GraphQL data without printing tokens. To repeat with an empty JWKS cache, restart API and wait for its rollout before rerunning the Job.
+Expected: valid RS256 participant queries return 200 with matching Portal/Mobile P001 data; tampered, malformed and missing tokens return 401 on each endpoint; valid P001 tokens querying P002/P999 return generic GraphQL `FORBIDDEN` with no participant data. The helper verifies issuer CA/hostname and compares GraphQL data without printing tokens. To repeat with an empty JWKS cache, restart API and wait for its rollout before rerunning the Job.
 
 For failures use `kubectl -n participant-services get pods`, `describe pod <name>`, `logs deployment/<name>` or `logs job/auth-smoke`. `ErrImageNeverPull` means an image was not loaded. `CreateContainerConfigError`/`FailedMount` often points to a missing Secret or ConfigMap. A certificate error requires checking CA, SAN, expiry and mounted settings; do not disable API TLS verification.
 
@@ -136,7 +136,7 @@ For failures use `kubectl -n participant-services get pods`, `describe pod <name
 
 The issuer uses TCP probes: they detect a listening port, not certificate trust or JWKS correctness. The end-to-end Job establishes TLS/JWT behaviour. [Probe semantics](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) and [security context settings](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) follow Kubernetes documentation.
 
-See [AWS identity and secrets](aws-identity-secrets.md) for the proposed design and verified local service-account checks. No IAM workload roles, AWS Secrets Manager integration, ECR publication, ingress, network policy, autoscaling, multi-AZ resilience or production RBAC design is implemented. The local issuer is an unauthenticated synthetic fixture, not a production IdP. Participant-level authorisation remains missing. One replica is a demonstration, not high availability; no Kubernetes traffic-draining or load test is claimed.
+See [AWS identity and secrets](aws-identity-secrets.md) for the proposed design and verified local service-account checks. No IAM workload roles, AWS Secrets Manager integration, ECR publication, ingress, network policy, autoscaling, multi-AZ resilience or production RBAC design is implemented. The local issuer is an unauthenticated synthetic fixture, not a production IdP. Self-access is implemented; staff/delegate access remains missing. One replica is a demonstration, not high availability; no Kubernetes traffic-draining or load test is claimed.
 
 </details>
 

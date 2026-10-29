@@ -20,12 +20,12 @@ These initial results were reported evidence. A subsequent verification run on 2
 | Area | Existing coverage | Limit |
 |---|---|---|
 | Todo | Sequential create/query resolver test | Does not prove concurrent slice writes safe |
-| Participant service | Lookup, missing ID, cancelled context, 100 concurrent reads, repository delegation/errors | No participant authorisation or write path |
+| Participant service | Lookup, missing ID, cancelled context, 100 concurrent reads, repository delegation/errors | Self-access implemented; no staff/delegate policy or write path |
 | Portal and Mobile | Resolver/HTTP participant queries | Isolated handler tests do not prove runtime security wiring |
 | MuleSoft | Mock handlers, success, missing ID, upstream errors, timeout, cancellation, network failure; retries and backoff cancellation | Simulated backend, no actual enterprise system |
 | End-to-end | Both GraphQL APIs through service and mock MuleSoft | Separate from JWT integration fixture |
 | JWT | Signature/claim rejection, JWK parsing/validation, HTTPS fetch rules, cache expiry/concurrency, rotation and refresh limiting, middleware | No resource-level policy |
-| JWT HTTP integration | Valid, missing, expired, malformed and wrong-audience tokens on both GraphQL paths; public `/healthz` and `/readyz` | Uses `__typename`; does not exercise participant resolvers or MuleSoft, and builds its own router |
+| JWT HTTP integration | Valid, missing, expired, malformed and wrong-audience tokens on both GraphQL paths; public `/healthz` and `/readyz` | Also tests participant queries, mapping tampering and forbidden/no-upstream behaviour; builds its own router |
 | Health/lifecycle | Readiness 200/503 and concurrency, active request completes during shutdown | No Kubernetes termination/traffic-draining verification |
 | Observability | Request ID middleware, access logs for 200/404/500, upstream correlation | No distributed tracing or log backend |
 
@@ -73,7 +73,7 @@ dc up -d --force-recreate --no-deps --wait api
 # Then run the authentication shell block below.
 ```
 
-No API TLS bypass or JWT verifier change was required. The existing issuer health-probe bypass and missing participant-level authorisation remain limitations.
+No API TLS bypass or JWT verifier change was required. At that 28 October stage, the issuer health-probe bypass and missing participant authorisation remained limitations. The later self-access implementation is described in [authorisation](authorisation.md).
 
 ## Local authentication smoke check
 
@@ -106,6 +106,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -149,11 +150,11 @@ func main() {
 	sig[0] ^= 1
 	bad := parts[0] + "." + parts[1] + "." + base64.RawURLEncoding.EncodeToString(sig)
 	cases := []struct {
-		path, query string
-		expected    string
+		path, query, field string
+		expected           string
 	}{
-		{"/graphql/portal", `{ participant(id: "P001") { id firstName lastName } }`, `{"participant":{"id":"P001","firstName":"Alex","lastName":"Taylor"}}`},
-		{"/graphql/mobile", `{ profile(participantId: "P001") { participantId displayName } }`, `{"profile":{"participantId":"P001","displayName":"Alex Taylor"}}`}}
+		{"/graphql/portal", `{ participant(id: "P001") { id firstName lastName } }`, "participant", `{"participant":{"id":"P001","firstName":"Alex","lastName":"Taylor"}}`},
+		{"/graphql/mobile", `{ profile(participantId: "P001") { participantId displayName } }`, "profile", `{"profile":{"participantId":"P001","displayName":"Alex Taylor"}}`}}
 	for _, c := range cases {
 		for _, tc := range []struct {
 			name, token string
@@ -186,6 +187,30 @@ func main() {
 			}
 			fmt.Println(c.path, tc.name, r.StatusCode)
 		}
+		for _, id := range []string{"P002", "P999"} {
+			body, _ := json.Marshal(map[string]string{"query": strings.ReplaceAll(c.query, "P001", id)})
+			req, _ := http.NewRequest("POST", "http://api:8080"+c.path, bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+token.AccessToken)
+			req.Header.Set("X-Participant-ID", id)
+			r, err := client.Do(req)
+			must(err == nil, "denied query request failed")
+			var denied struct {
+				Data   map[string]json.RawMessage `json:"data"`
+				Errors []struct {
+					Message    string         `json:"message"`
+					Extensions map[string]any `json:"extensions"`
+				} `json:"errors"`
+			}
+			err = json.NewDecoder(r.Body).Decode(&denied)
+			r.Body.Close()
+			must(err == nil && r.StatusCode == 200, "expected GraphQL forbidden response")
+			must(len(denied.Errors) == 1 && denied.Errors[0].Message == "forbidden" && denied.Errors[0].Extensions["code"] == "FORBIDDEN", "expected generic forbidden error")
+			must(string(denied.Data[c.field]) == "null", "denied participant data exposed")
+			must(r.Header.Get("X-Request-ID") != "", "missing denied-query request ID")
+			fmt.Println(c.path, "cross-participant", id, "FORBIDDEN (no data)")
+		}
+
 	}
 	fmt.Println("Verified TLS issuer retrieval and authenticated participant data passed; tokens never printed.")
 }
@@ -198,7 +223,7 @@ docker run --rm --network participant-services_default \
   golang:1.27.3-alpine3.23 go run /smoke.go
 ```
 
-Expected: valid RS256 200 on both routes with P001/Alex Taylor data and no GraphQL errors; tampered, malformed and missing tokens 401 on each route; every response has a request ID. The client intentionally uses trusted CA verification without `InsecureSkipVerify`. It does not test expired/wrong-audience tokens, rotation or cross-participant authorisation; existing Go tests cover several claim cases, while participant authorisation remains unimplemented. The documented block was observed passing during the approved repeat verification, including a fresh-cache API run.
+Expected: valid RS256 200 on both routes with P001/Alex Taylor data and no GraphQL errors; tampered, malformed and missing tokens 401 on each route; every response has a request ID. The client intentionally uses trusted CA verification without `InsecureSkipVerify`. It additionally verifies that valid P001 tokens requesting P002/P999 return generic GraphQL `FORBIDDEN` and null participant data despite a spoofed identity header. It does not test expired/wrong-audience tokens or rotation; the Go suite covers claim rejection, missing identity/mapping, and no repository calls on denial. The original block passed the 28 October authentication run; the extended self-access block has separate 29 October results below.
 
 </details>
 
@@ -219,3 +244,11 @@ On 28 October 2026, fresh `go test -count=1 -race ./...`, `go vet ./...`, format
 ## First hosted CI result
 
 On 28 October 2026, GitHub Actions [run 40651138381](https://github.com/shawfire/participant-services/actions/runs/40651138381) for commit `bd91def` completed successfully: documentation/configuration (9 seconds), Go tests/vet (1 minute 36 seconds), and all service image builds (41 seconds). Observed race tests, vet, module-file checks, checksum-verified kubectl installation, Compose validation and Kustomize rendering all passed on hosted Ubuntu/AMD64. Earlier local-only/hosted-unverified statements above describe their historical stage; this run supplies the later hosted evidence. It does not add hosted runtime-stack or AWS verification.
+
+## Participant self-access verification — 29 October 2026
+
+**Observed:** focused race tests passed, followed by the complete `go test -count=1 -race ./...` suite and `go vet ./...`. New service tests deny absent/empty identity, missing mapping, cross-participant/unknown/empty requests before repository invocation, on both memory and injected-repository paths. A mismatched upstream record ID is rejected. The HTTP JWT test now traverses real participant resolvers and mock MuleSoft: signed mappings for P001 and P002 access their own records; cross-participant, unknown-other and missing-mapping requests return generic `FORBIDDEN` without upstream calls. A modified mapping without a new signature returns 401; spoofed identity headers do not grant access. Existing cancellation, not-found and concurrent-read tests pass with explicit trusted fixtures.
+
+The local issuer now signs `participant_id=P001`. Rebuilt Compose passed validation/startup with existing certificates, and the exact updated smoke block passed twelve cases: own reads 200, six invalid/missing-token rejections in total, and P002/P999 forbidden responses on both routes with null participant data. Loaded the same images into kind, restarted/waited for all three Deployments, updated the smoke-client ConfigMap and ran a fresh disposable Job; all twelve cases passed there too. Tokens/keys were not displayed. Generic GraphQL denials use HTTP 200 plus `errors[].extensions.code=FORBIDDEN`; they are not HTTP 401 authentication failures.
+
+[Authorisation](authorisation.md) owns the policy and claim-provisioning contract. New code remains uncommitted and has not run on hosted CI. Staff/delegate rules, entitlement revocation/provisioning, production identity assurance and the existing issuer health-probe TLS bypass remain outside this implementation. No AWS resources changed.

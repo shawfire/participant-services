@@ -155,3 +155,19 @@ Updated current README, container, authentication, CI, roadmap and testing statu
 **Observed evidence:** run 40651138381 passed all three jobs for `bd91def`. Hosted test/build evidence replaces current uncertainty without claiming runtime/AWS verification. Prior audit content, snapshots, Markdown structure/links and diff checks passed. Certificates/keys and the user's Compose backup were not committed. The follow-up documentation update is within the user's commit/push authorisation.
 
 </details>
+
+<details>
+<summary>DOC-014 — 29 October 2026 — Document shared participant self-access</summary>
+
+Added the authorisation reference as the authoritative description of signed participant mapping, shared-service enforcement, GraphQL denial semantics, fixture compatibility and remaining scope. Updated current README/DESIGN, index, authentication, GraphQL, containers/Kubernetes, AWS identity, CI and roadmap statements to distinguish implemented self-access from missing staff/delegate/production controls. Extended testing's existing token-safe client with cross-participant/unknown-other denials and recorded observed evidence. Appended the development stage without rewriting prior journal entries or snapshots.
+
+**Observed validation:** focused and full race tests, vet, Compose validation/build/startup, Docker twelve-case demonstration and the refreshed Kubernetes twelve-case Job passed. Current documentation links/anchors, collapsed sections, test shell syntax, preservation and diff checks passed. No token/key disclosure, dependency additions, commit or push occurred. Hosted CI has not run for this working-tree change.
+
+</details>
+
+<details>
+<summary>DOC-015 — 29 October 2026 — Prepare participant self-access documentation for review</summary>
+
+Updated current authorisation/README status to identify the review branch and implementation commit `e5c748f`, preserving earlier working-tree observations. Appended the PR-preparation stage with user authorisation, final race/vet results, compatibility impact and review boundaries. All existing policy/test/deployment documentation changes are included in the review scope. Prior journal and change-log entries remain unchanged. The user's Compose backup and certificate/key material remain outside the commit set.
+
+</details>

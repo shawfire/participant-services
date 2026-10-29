@@ -12,16 +12,16 @@ Separate Portal and Mobile schemas are implemented. Both use the same participan
 | Portal | `/graphql/portal` | `participant(id: ID!)` | `id`, `firstName`, `lastName` |
 | Mobile | `/graphql/mobile` | `profile(participantId: ID!)` | `participantId`, `displayName` |
 
-The source contracts are [Portal schema](../graph/portal/schema.graphqls) and [Mobile schema](../graph/mobile/schema.graphqls). Participant results are nullable: domain `ErrNotFound` maps to `null`; other service errors propagate through GraphQL. Mobile combines first and last names into `displayName`.
+The source contracts are [Portal schema](../graph/portal/schema.graphqls) and [Mobile schema](../graph/mobile/schema.graphqls). Participant results are nullable: domain `ErrNotFound` maps to `null`; authorisation failures return a generic `FORBIDDEN` error with a null field; other service errors propagate through GraphQL. Mobile combines first and last names into `displayName`.
 
-Caller-supplied IDs are not yet checked against authenticated identity. Plans, submissions, field access policies, depth/complexity limits and DataLoader batching are not implemented. See [authentication](authentication.md).
+Caller-supplied IDs are checked against the trusted mapping under the [self-access policy](authorisation.md). Plans, submissions, field access policies, depth/complexity limits and DataLoader batching are not implemented. See [authentication](authentication.md).
 
 </details>
 
 <details>
 <summary>Authenticated request examples</summary>
 
-Start the services using the [quick start](../README.md#quick-start). Set `ACCESS_TOKEN` in your shell to a valid token from the configured provider, then run:
+Start the services using the [quick start](../README.md#quick-start). Set `ACCESS_TOKEN` in your shell to a valid token from the configured provider with signed `participant_id=P001`, then run:
 
 ```bash
 curl -sS http://localhost:8080/graphql/portal \

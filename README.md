@@ -4,7 +4,7 @@ A synthetic Go/GraphQL middleware lab for the NDIA EL2 Lead/Principal Developer 
 
 Portal and Mobile expose separate GraphQL contracts over a shared participant service and mock MuleSoft HTTP adapter. The working tree implements JWT authentication, bounded retries, JSON logging, request correlation, health/readiness probes and graceful shutdown.
 
-**Status — 28 October 2026:** authentication is implemented and committed as `4a4bec9`. Participant-level authorisation is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) passed their first GitHub-hosted run for `bd91def`. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
+**Status — 29 October 2026:** authentication is implemented and committed as `4a4bec9`. [Participant self-access](docs/authorisation.md) is implemented on the review branch; staff/delegate access is not implemented. Docker/Compose packaging is implemented; see the journal for verification. A local [Kubernetes demonstration](docs/kubernetes.md) is implemented and verified. [CI validation and image builds](docs/ci.md) passed their first GitHub-hosted run for `bd91def`. AWS EKS deployment, IAM/secrets integration and CD remain planned. See [testing](docs/testing.md) for verification evidence and limits.
 
 ## Quick start
 
@@ -46,4 +46,4 @@ go vet ./...
 
 Start with the [documentation index](docs/README.md) or [architecture overview](DESIGN.md). The [development journal](docs/development-journal.md) is the continuous audit trail for every development step, preserving commands, failures, decisions and verification results from initial setup onward. Follow the [maintenance rules](docs/history/README.md#maintenance-rules) as work continues. Complete pre-refactor documents are in [historical snapshots](docs/history/README.md). Next priorities are recorded in the [roadmap](docs/roadmap.md).
 
-Use synthetic participant data only. Never commit credentials, tokens, private keys, real participant information or secret-bearing `.env` files. Keep this prototype local while resource authorisation remains absent. Interview examples should distinguish lab exercises from professional production experience.
+Use synthetic participant data only. Never commit credentials, tokens, private keys, real participant information or secret-bearing `.env` files. Keep this synthetic prototype local; self-access alone does not establish production readiness. Interview examples should distinguish lab exercises from professional production experience.
