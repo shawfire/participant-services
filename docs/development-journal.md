@@ -1172,3 +1172,12 @@ Added the [documentation change log](documentation-changelog.md) with stable chr
 **Review focus:** explicit signed mapping rather than subject-as-ID; shared enforcement before repository access; generic GraphQL denial; missing-mapping/old-token compatibility; no staff/delegate policy or production entitlement lifecycle. Prior Docker and Kubernetes twelve-case results remain the runtime evidence. Push only the review branch, open against `main`, and do not merge. Hosted checks are to be inspected after publication. See DOC-015 in the [documentation change log](documentation-changelog.md).
 
 </details>
+
+<details>
+<summary>Participant self-access PR opened — 29 October 2026</summary>
+
+**Publication:** pushed `feat/participant-self-access` with implementation commit `e5c748f` and documentation commit `c90e782`. Opened [PR #1 — Enforce participant self-access across Portal and Mobile](https://github.com/shawfire/participant-services/pull/1) against `main`. Verified the PR is open and includes all 29 intended implementation/test/documentation files, with no certificate/key material or local Compose backup. The PR description records expected behaviour, compatibility, actual test evidence and remaining policy limitations. No merge was performed.
+
+**Initial hosted observation:** PR run 40830611089 had passed Go race tests/vet and documentation/configuration checks; image builds were still running when this entry was recorded. Current hosted status belongs to the PR checks, not an inferred result. Added the PR reference to current testing evidence and this append-only audit; local Markdown/diff checks passed before the follow-up commit. See DOC-016 in the [documentation change log](documentation-changelog.md).
+
+</details>

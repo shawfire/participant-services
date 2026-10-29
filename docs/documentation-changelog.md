@@ -171,3 +171,10 @@ Added the authorisation reference as the authoritative description of signed par
 Updated current authorisation/README status to identify the review branch and implementation commit `e5c748f`, preserving earlier working-tree observations. Appended the PR-preparation stage with user authorisation, final race/vet results, compatibility impact and review boundaries. All existing policy/test/deployment documentation changes are included in the review scope. Prior journal and change-log entries remain unchanged. The user's Compose backup and certificate/key material remain outside the commit set.
 
 </details>
+
+<details>
+<summary>DOC-016 — 29 October 2026 — Link the published self-access review</summary>
+
+Added PR #1, branch/base and commit references to the chronological journal and current testing evidence. Recorded observed initial hosted-check status without claiming an unfinished image build passed. Previous journal/change-log entries remain unchanged; PR description provides the consolidated review context. No merge or secret/backup publication occurred.
+
+</details>
