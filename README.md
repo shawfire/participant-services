@@ -4,7 +4,7 @@
 
 A focused Go/GraphQL reference implementation exploring authenticated APIs, participant self-access, shared application services and resilient HTTP integration. It uses synthetic data and a mock enterprise backend.
 
-Independently developed after an NDIA Lead/Principal Developer interview exercise. This is not an NDIA system, an endorsed solution or evidence of NDIA production experience. The complete development history remains available, including the original interview context.
+Independently developed as a reference implementation to explore maintainable software architecture, secure API integration, transparent engineering decisions and incremental AI-assisted development. This is a demonstration project using synthetic data, not a production system or an endorsed solution for any organisation. The complete chronological development history remains available.
 
 ## What it demonstrates
 
