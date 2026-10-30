@@ -11,43 +11,48 @@ Independently developed as a reference implementation to explore maintainable so
 ```mermaid
 %%{init: {"flowchart": {"nodeSpacing": 16, "rankSpacing": 26}}}%%
 flowchart TD
-  Mobile["Mobile App"] -.-> MG
-  Mobile ~~~ Web["Web Portal"]
-  Web -.-> PG
-  ID["myGov / Digital ID<br/>Integration"] -.-> Federation["Federation /<br/>API issuer<br/>Requirements unverified"]
-  Federation -. issuer trust .-> Auth
-  ID ~~~ Mobile
-  Federation ~~~ Web
+  Mobile["Mobile App<br/>React Native · on device"] -.-> MG
+  Web["Web Portal<br/>React / Next.js · browser"] -.-> Next
 
   subgraph EKS["AWS EKS Cluster"]
-    subgraph API["Go GraphQL API"]
-      MG["Mobile GraphQL"] --> Auth["JWT / JWKS<br/>Validation"]
-      PG["Portal GraphQL"] --> Auth
-      Auth --> Service["Shared Participant<br/>Service + self-access"]
-      Service --> Mule["MuleSoft HTTP<br/>Integration"]
+    Next["Next.js Web Server<br/>SSR / RSC / route handlers"] -.-> PG
+    subgraph BFF["Go GraphQL BFF"]
+      MG["Mobile GraphQL<br/>endpoint"] --> Auth["JWT / JWKS<br/>Validation"]
+      PG["Portal GraphQL<br/>endpoint"] --> Auth
+      Auth --> Service["Shared Participant Service<br/>+ self-access authorisation"]
+      Service --> Mule["MuleSoft HTTP client"]
     end
   end
 
-  Auth -->|HTTPS JWKS| Issuer["Local JWT Issuer<br/>Development Only"]
-  Issuer ~~~ Service
+  ID["myGov / Digital ID<br/>Integration"] -.-> Federation["Federation / API issuer<br/>Requirements unverified"]
+  Federation -. issuer trust .-> Auth
+  Federation ~~~ Mobile
+  Mobile ~~~ Web
+  Auth -->|HTTPS JWKS| Issuer["Local JWT Issuer<br/>Development only"]
   Mule --> Mock["Local Mock MuleSoft"]
-  Service -.-> DB["PostgreSQL /<br/>AWS RDS"]
+  Service -.-> DB["PostgreSQL / AWS RDS"]
+  Mock ~~~ Issuer
+  Issuer ~~~ DB
 
   classDef implemented stroke-width:2px,stroke-dasharray:0;
   classDef proposed stroke-width:2px,stroke-dasharray:6 4;
   class MG,PG,Auth,Service,Mule,Issuer,Mock implemented;
-  class Mobile,Web,ID,Federation,DB proposed;
-  style API fill:none,stroke-width:2px,stroke-dasharray:0
-  style EKS fill:none,stroke-width:2px,stroke-dasharray:6 4
+  class Mobile,Web,Next,ID,Federation,DB proposed;
+  style BFF fill:none,stroke-width:2px,stroke-dasharray:0
+  style EKS fill:none,stroke-width:3px,stroke-dasharray:6 4
 ```
 
-**Legend:** Solid border/connections: implemented and locally verified. Dashed border/connections: planned or not yet demonstrated.
+**Legend:** Solid borders indicate implemented and locally verified software; dashed borders indicate planned, conceptual or not-yet-demonstrated components and deployment boundaries. Solid connections show implemented interactions; dashed connections show proposed interactions.
 
-This diagram combines the current reference implementation with a proposed future architecture; it is not a verified representation of NDIA's internal systems. The dashed AWS EKS boundary shows intended hosting, not an existing cluster. Kubernetes manifests exist and local kind deployment/API checks passed on 28–29 October 2026; no AWS deployment or currently running cluster was verified for this update. See [Kubernetes evidence](docs/testing.md#kubernetes-verification).
+The Go GraphQL BFF is one implemented Go application with channel-specific Mobile and Portal endpoints over a shared participant service. Its solid boundary indicates implemented software, not an existing EKS deployment. The dashed AWS EKS boundary represents proposed hosting for the BFF and Next.js server. No EKS cluster has been provisioned or AWS deployment demonstrated by this project. Existing Kubernetes manifests and local kind checks on 28–29 October 2026 demonstrate local deployment only. See [Kubernetes evidence](docs/testing.md#kubernetes-verification).
 
-The myGov / Digital ID integration and federation/API issuer are conceptual: OAuth 2.0 / OpenID Connect are potential technologies, subject to verification of actual integration requirements. No internal identity provider or direct issuance of API JWTs by myGov is assumed. The API currently validates tokens against a configured issuer and HTTPS JWKS; the local issuer is development-only, not production-ready.
+The two frontend applications are planned. The React Native Mobile App runs on the user's device, outside EKS, and calls Mobile GraphQL. The Web Portal UI runs in the browser and connects to a separate Next.js Web Server inside the proposed EKS boundary. That server would provide server-side rendering (SSR), React Server Components (RSC), route handlers and other server-side functionality where required, calling Portal GraphQL. It is not an additional GraphQL BFF, and no Next.js server runtime is implemented.
 
-Self-access authorisation is enforced in the shared service. PostgreSQL/RDS is a separate future persistence capability alongside MuleSoft integration, not a replacement.
+Alternatively, a static React web application could be hosted on **Amazon S3 + CloudFront**, with the browser calling the GraphQL BFF through an appropriately secured public API endpoint. This is an alternative to deploying a Next.js server runtime on EKS. Runtime server-side rendering requires a suitable server execution environment; S3/CloudFront static hosting does not itself provide a Next.js server runtime.
+
+This is a reference architecture, not a verified representation of NDIA's internal systems. The myGov / Digital ID integration and federation/API issuer are conceptual: OAuth 2.0 / OpenID Connect are possible integration technologies whose suitability and requirements need verification. No internal identity provider or direct issuance of API JWTs by myGov is assumed. Existing JWT/JWKS validation uses a configured issuer and HTTPS JWKS; the local issuer is development-only, not production-ready.
+
+Self-access authorisation is enforced in the shared service. The MuleSoft HTTP client is inside the BFF; the local mock is outside the proposed application deployment boundary. No MuleSoft platform hosting inside EKS is implied. PostgreSQL / AWS RDS remains outside EKS as a future persistence capability alongside MuleSoft integration, not a replacement.
 
 See [Architecture and Design](DESIGN.md) and the [Project TODO](TODO.md) for details and planned work.
 
