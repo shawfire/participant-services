@@ -6,6 +6,51 @@ A focused Go/GraphQL reference implementation exploring authenticated APIs, part
 
 Independently developed as a reference implementation to explore maintainable software architecture, secure API integration, transparent engineering decisions and incremental AI-assisted development. This is a demonstration project using synthetic data, not a production system or an endorsed solution for any organisation. The complete chronological development history remains available.
 
+## Architecture at a glance
+
+```mermaid
+%%{init: {"flowchart": {"nodeSpacing": 16, "rankSpacing": 26}}}%%
+flowchart TD
+  Mobile["Mobile App"] -.-> MG
+  Mobile ~~~ Web["Web Portal"]
+  Web -.-> PG
+  ID["myGov / Digital ID<br/>Integration"] -.-> Federation["Federation /<br/>API issuer<br/>Requirements unverified"]
+  Federation -. issuer trust .-> Auth
+  ID ~~~ Mobile
+  Federation ~~~ Web
+
+  subgraph EKS["AWS EKS Cluster"]
+    subgraph API["Go GraphQL API"]
+      MG["Mobile GraphQL"] --> Auth["JWT / JWKS<br/>Validation"]
+      PG["Portal GraphQL"] --> Auth
+      Auth --> Service["Shared Participant<br/>Service + self-access"]
+      Service --> Mule["MuleSoft HTTP<br/>Integration"]
+    end
+  end
+
+  Auth -->|HTTPS JWKS| Issuer["Local JWT Issuer<br/>Development Only"]
+  Issuer ~~~ Service
+  Mule --> Mock["Local Mock MuleSoft"]
+  Service -.-> DB["PostgreSQL /<br/>AWS RDS"]
+
+  classDef implemented stroke-width:2px,stroke-dasharray:0;
+  classDef proposed stroke-width:2px,stroke-dasharray:6 4;
+  class MG,PG,Auth,Service,Mule,Issuer,Mock implemented;
+  class Mobile,Web,ID,Federation,DB proposed;
+  style API fill:none,stroke-width:2px,stroke-dasharray:0
+  style EKS fill:none,stroke-width:2px,stroke-dasharray:6 4
+```
+
+**Legend:** Solid border/connections: implemented and locally verified. Dashed border/connections: planned or not yet demonstrated.
+
+This diagram combines the current reference implementation with a proposed future architecture; it is not a verified representation of NDIA's internal systems. The dashed AWS EKS boundary shows intended hosting, not an existing cluster. Kubernetes manifests exist and local kind deployment/API checks passed on 28–29 October 2026; no AWS deployment or currently running cluster was verified for this update. See [Kubernetes evidence](docs/testing.md#kubernetes-verification).
+
+The myGov / Digital ID integration and federation/API issuer are conceptual: OAuth 2.0 / OpenID Connect are potential technologies, subject to verification of actual integration requirements. No internal identity provider or direct issuance of API JWTs by myGov is assumed. The API currently validates tokens against a configured issuer and HTTPS JWKS; the local issuer is development-only, not production-ready.
+
+Self-access authorisation is enforced in the shared service. PostgreSQL/RDS is a separate future persistence capability alongside MuleSoft integration, not a replacement.
+
+See [Architecture and Design](DESIGN.md) and the [Project TODO](TODO.md) for details and planned work.
+
 ## What it demonstrates
 
 - Separate Portal and Mobile GraphQL contracts over one participant service.
