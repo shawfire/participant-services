@@ -1,5 +1,7 @@
 # Participant Services
 
+[Project TODO](TODO.md) · [Detailed architectural roadmap](docs/roadmap.md)
+
 A focused Go/GraphQL reference implementation exploring authenticated APIs, participant self-access, shared application services and resilient HTTP integration. It uses synthetic data and a mock enterprise backend.
 
 Independently developed after an NDIA Lead/Principal Developer interview exercise. This is not an NDIA system, an endorsed solution or evidence of NDIA production experience. The complete development history remains available, including the original interview context.

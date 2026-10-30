@@ -1213,3 +1213,14 @@ Added the [documentation change log](documentation-changelog.md) with stable chr
 **Next stage:** after the approved commit/push and observed hosted result, prepare the three requested demonstration scripts/checklists separately. Preparation, syntax validation, execution, recording and publication are distinct milestones. Do not claim a clean-checkout or recorded demonstration passed merely because its script exists. Commit SHA and hosted results will be recorded in the subsequent stage rather than invented before the commit exists.
 
 </details>
+
+<details>
+<summary>Public release follow-up: project delivery checklist — 30 October 2026</summary>
+
+**Context/evidence:** the approved `6ca994e` revision was made public after confirming remote main and private visibility. Private vulnerability reporting was enabled and verified; anonymous access to release documentation matched the approved revision. No Git history was rewritten. This records the observed release separately from the uncommitted recording work.
+
+**Documentation change:** added root TODO.md with evidence-based completed milestones, unchecked current priorities and future enhancements, plus supporting references. Linked it and the detailed roadmap near the top of README. React Native precedes the React web portal. Videos remain unrecorded/unpublished; the earlier Video 1 result was a fresh-checkout rehearsal on an existing Docker installation, not a pristine machine.
+
+**Scope/verification:** the intended change contains only TODO.md, the README navigation hunk and this stage's journal/changelog append. Earlier local recording drafts, their audit entries and README rehearsal hunk remain preserved but excluded from the proposed commit patch. Documentation links/collapsible sections, redacted secret scans, diff and historical-preservation checks are required before handoff. No application change, new runtime verification, commit or push is authorised or performed.
+
+</details>

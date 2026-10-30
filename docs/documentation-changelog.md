@@ -196,3 +196,10 @@ Added PR #1, branch/base and commit references to the chronological journal and 
 Recorded owner authorisation for the exact preparation commit/push and final secret/history/licensing checks. Adjusted current status wording so it remains accurate across that approved commit. Previous publication-preparation observations remain historical and unchanged. Video planning will be separate uncommitted work; no visibility or announcement authorisation is implied.
 
 </details>
+
+<details>
+<summary>DOC-022 — 30 October 2026 — Add public project delivery checklist</summary>
+
+Added root TODO.md with verified completed milestones, unchecked video/persistence/RDS/mobile/portal priorities, future engineering work and canonical documentation links. Added concise README navigation to TODO and the detailed roadmap. Appended the release/checklist stage without changing earlier audit entries or historical snapshots. Existing recording drafts and their related hunks are excluded from the proposed commit; DOC-019 through DOC-021 remain reserved for those preserved local entries. No video completion, new runtime result, application change, commit or push is claimed.
+
+</details>
