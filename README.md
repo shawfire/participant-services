@@ -1,6 +1,6 @@
 # Participant Services
 
-[Project TODO](TODO.md) · [Detailed architectural roadmap](docs/roadmap.md)
+[Project TODO](TODO.md) · [Detailed architectural roadmap](docs/roadmap.md) · [Development Journal](docs/development-journal.md)
 
 A focused Go/GraphQL reference implementation exploring authenticated APIs, participant self-access, shared application services and resilient HTTP integration. It uses synthetic data and a mock enterprise backend.
 
