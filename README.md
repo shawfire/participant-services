@@ -17,8 +17,8 @@ flowchart TD
   subgraph EKS["AWS EKS Cluster"]
     Next["Next.js Web Server<br/>SSR / RSC / route handlers"] -.-> PG
     subgraph BFF["Go GraphQL BFF"]
-      MG["Mobile GraphQL<br/>endpoint"] --> Auth["JWT / JWKS<br/>Validation"]
-      PG["Portal GraphQL<br/>endpoint"] --> Auth
+      MG["Mobile GraphQL API"] --> Auth["JWT / JWKS<br/>Validation"]
+      PG["Portal GraphQL API"] --> Auth
       Auth --> Service["Shared Participant Service<br/>+ self-access authorisation"]
       Service --> Mule["MuleSoft HTTP client"]
     end
@@ -50,7 +50,7 @@ The two frontend applications are planned. The React Native Mobile App runs on t
 
 Alternatively, a static React web application could be hosted on **Amazon S3 + CloudFront**, with the browser calling the GraphQL BFF through an appropriately secured public API endpoint. This is an alternative to deploying a Next.js server runtime on EKS. Runtime server-side rendering requires a suitable server execution environment; S3/CloudFront static hosting does not itself provide a Next.js server runtime.
 
-This is a reference architecture, not a verified representation of NDIA's internal systems. The myGov / Digital ID integration and federation/API issuer are conceptual: OAuth 2.0 / OpenID Connect are possible integration technologies whose suitability and requirements need verification. No internal identity provider or direct issuance of API JWTs by myGov is assumed. Existing JWT/JWKS validation uses a configured issuer and HTTPS JWKS; the local issuer is development-only, not production-ready.
+This diagram illustrates the current reference implementation and its proposed architectural evolution. It does not represent the internal architecture of any particular organisation. The myGov / Digital ID integration and federation/API issuer are conceptual: OAuth 2.0 / OpenID Connect are possible integration technologies whose suitability and requirements need verification. No internal identity provider or direct issuance of API JWTs by myGov is assumed. Existing JWT/JWKS validation uses a configured issuer and HTTPS JWKS; the local issuer is development-only, not production-ready.
 
 Self-access authorisation is enforced in the shared service. The MuleSoft HTTP client is inside the BFF; the local mock is outside the proposed application deployment boundary. No MuleSoft platform hosting inside EKS is implied. PostgreSQL / AWS RDS remains outside EKS as a future persistence capability alongside MuleSoft integration, not a replacement.
 
